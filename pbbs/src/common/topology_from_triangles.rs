@@ -84,6 +84,7 @@ impl<'a> HashHelper for HashEdges<'a> {
 
 type EdgeTable<'a> = HashTable<HashEdges<'a>>;
 
+#[allow(mismatched_lifetime_syntaxes)]
 pub fn topology_from_triangles(
     tris: &Triangles<Point2d<f64>>,
     extra_points: usize

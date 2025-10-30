@@ -37,6 +37,7 @@ use super::graph::*;
 
 const ADJ_GRAPH_HEADER: &str = "AdjacencyGraph";
 
+#[allow(unexpected_cfgs)]
 pub fn read_graph_from_file(fname: &str) -> Graph {
     let file = File::open(&fname).unwrap();
     let reader = BufReader::new(file);
@@ -75,6 +76,7 @@ pub fn read_graph_from_file(fname: &str) -> Graph {
     g
 }
 
+#[allow(unexpected_cfgs)]
 pub fn read_edge_array_from_file(fname: &str) -> EdgeArray {
     let mut ea = EdgeArray {
         es: vec![],

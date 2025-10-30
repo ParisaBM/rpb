@@ -47,6 +47,7 @@ pub trait HashEq {
     fn hash(&self, _a: Self::KT) -> usize { todo!() }
     fn get_key(&self, _a: Self::IT) -> Self::KT { todo!() }
 
+    #[allow(mismatched_lifetime_syntaxes)]
     fn get_key_mut<'a>(&'a self, _a: &'a mut Self::RT) -> &mut Self::KT {
         todo!()
     }

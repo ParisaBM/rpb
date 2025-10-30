@@ -28,6 +28,7 @@ use std::collections::BinaryHeap;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Mutex, MutexGuard};
 
+#[allow(deprecated)]
 use rand::{Rng, thread_rng};
 
 use crate::util::Padded;
@@ -55,6 +56,7 @@ impl<PQElem: Ord + Copy> MultiQueue<PQElem> {
         }
     }
 
+    #[allow(mismatched_lifetime_syntaxes, deprecated)]
     fn lock_a_queue(&self) -> (MutexGuard<BinaryHeap<PQElem>>, usize) {
         let mut index;
         let q = loop {
@@ -66,6 +68,7 @@ impl<PQElem: Ord + Copy> MultiQueue<PQElem> {
         (q, index)
     }
 
+    #[allow(mismatched_lifetime_syntaxes, deprecated)]
     fn lock_a_queue_except(&self, except: usize) -> (MutexGuard<BinaryHeap<PQElem>>, usize) {
         let mut index;
         let q = loop {

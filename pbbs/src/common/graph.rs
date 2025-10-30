@@ -230,6 +230,7 @@ impl Graph {
     }
 
     #[inline(always)]
+    #[allow(mismatched_lifetime_syntaxes)]
     pub fn index(&self, i: usize) -> Vertex {
         debug_assert!(i < self.n);
 

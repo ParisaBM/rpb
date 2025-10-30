@@ -171,6 +171,7 @@ impl<'a> SimpleX<'a>
         }
     }
 
+    #[allow(mismatched_lifetime_syntaxes)]
     pub fn first_vertex(&self) -> &'a Vtx {
         self.t.unwrap().vtx[self.o as usize].unwrap()
     }

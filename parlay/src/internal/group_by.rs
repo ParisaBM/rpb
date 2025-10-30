@@ -42,6 +42,7 @@ impl<T: PrimInt> HashEq for DedupHelper<T>
 
     fn hash(&self, a: Self::KT) -> usize { a.to_usize().unwrap() }
     fn get_key(&self, a: Self::IT) -> Self::KT { a }
+    #[allow(mismatched_lifetime_syntaxes)]
     fn get_key_mut<'a>(&'a self, a: &'a mut Self::IT) -> &mut Self::KT { a }
     fn get_key_from_result(&self, a: Self::RT) -> Self::KT { a }
     fn equal(&self, a: Self::KT, b: Self::KT) -> bool { a.eq(&b) }
@@ -155,6 +156,7 @@ where
     fn hash(&self, a: Self::KT) -> usize { (self.hash_fn)(a) }
     fn get_key(&self, a: Self::IT) -> Self::KT { a }
 
+    #[allow(mismatched_lifetime_syntaxes)]
     fn get_key_mut<'a>(&'a self, a: &'a mut Self::RT) -> &mut Self::KT {
         &mut a.0
     }
