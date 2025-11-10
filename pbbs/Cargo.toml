@@ -98,3 +98,9 @@ test    = false
 name    = "dr"
 path    = "src/benchmarks/delaunay_refine/dr_time.rs"
 test    = false
+
+# WordCounts
+[[bin]]
+name    = "wc"
+path    = "src/benchmarks/word_counts/wc_time.rs"
+test    = false
