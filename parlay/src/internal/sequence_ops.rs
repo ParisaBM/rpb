@@ -168,3 +168,61 @@ pub fn sum_bool_serial(arr: &[bool]) -> usize {
 
     r
 }
+
+pub fn block_delayed_scan<T, F> (v: &Vec<T>, op: F, identity: T) -> (Vec<T>, T)
+where
+    T: Copy + Send + Sync + Default,
+    F: Fn(T, T) -> T + Copy + Send + Sync,
+{
+    let n = v.len();
+    let bls = _BLOCK_SIZE;
+    let n_blocks = num_blocks(n, bls);
+
+    // block_sums: length = number of blocks
+    // block_sums[i]: cumulative count of # token starts up to (and excluding) block i
+    #[allow(unused_assignments)]
+    let mut block_sums: Vec<T> = vec![identity; n_blocks+1];
+
+    if n_blocks > 0 {
+        block_sums = 
+            (0..=n_blocks)
+            .into_par_iter()
+            .map( |i| -> T {
+                // last value is identity, for later scan
+                if i == n_blocks { return identity.clone(); }
+
+                // slide a block from v
+                let start = std::cmp::min(i * bls, n);
+                let end = std::cmp::min(start + bls, n);
+
+                // for each block, initial value is identity,
+                // for each item in block, result = op(std::move(result), *it);
+                v[start..end].iter()
+                             .fold(identity.clone(), |acc, val| op(acc, *val))
+            })
+            .collect();
+    } else {
+        block_sums = vec![identity.clone()];
+    }
+
+    // total.0 = total number of tokens, total.1: last token start
+    let total = scan_inplace(&mut block_sums, false, op);
+
+    // zip each block_sums[i] with a block of start_tokens
+    let z_block = v.chunks(bls).zip(&block_sums);
+
+    // compute offsets for each token
+    let offsets: Vec<T> = z_block
+        .map( |(block, sum)| -> Vec<T> {
+            // initial value is the count of # token starts up to (and excluding) block i
+            let mut acc = *sum;
+
+            // accumulates within the block
+            block.iter().map( |val| -> T {
+                acc = op(acc, *val);
+                acc
+            }).collect()
+        }).flatten().collect();
+
+    (offsets, total)
+}

@@ -7,14 +7,17 @@ use std::fs;
 #[path ="../../common/io.rs"] mod io;
 
 use misc::*;
-use wc::wc_serial;
+use wc::{wc_serial, wc_histogram};
 use io::chars_from_file;
 
 type ResultType = (String, usize);
 
-define_args!(Algs::WordCounts);
+define_args!(Algs::Serial);
 
-define_algs!((WordCounts, "word-counts"));
+define_algs!(
+    (Serial, "serial"),
+    (Histogram, "histogram")
+);
 
 fn write_histograms_to_file(result: &Vec<ResultType>, out_file: &String) {
     let mut output: String = String::new();
@@ -29,7 +32,8 @@ fn write_histograms_to_file(result: &Vec<ResultType>, out_file: &String) {
 
 pub fn run(alg: Algs, rounds: usize, inp: &[DefChar]) -> (Vec<ResultType>, Duration) {
     let f = match alg {
-        Algs::WordCounts => {wc_serial::word_counts},
+        Algs::Serial => {wc_serial::word_counts},
+        Algs::Histogram => {wc_histogram::word_counts},
     };
 
     let mut r: Vec<ResultType> = Vec::new();
