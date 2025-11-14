@@ -15,7 +15,7 @@ impl Default for Djb2 {
     }
 }
 
-impl Hasher for Djb2{
+impl Hasher for Djb2 {
     fn write(&mut self, bytes: &[u8]) {
         for b in bytes {
             self.hash = ((self.hash << 5) + self.hash) + (*b as u64);
@@ -29,7 +29,7 @@ impl Hasher for Djb2{
 
 type Djb2Hasher = BuildHasherDefault<Djb2>;
 
-pub fn word_counts (s: &Vec<char>, result: &mut Vec<ResultType>) {
+pub fn word_counts(s: &Vec<char>, result: &mut Vec<ResultType>) {
     // remove any previous run results from time_loop
     result.clear();
 
@@ -39,12 +39,18 @@ pub fn word_counts (s: &Vec<char>, result: &mut Vec<ResultType>) {
     // if [A-Z], convert to lower case
     // else if [a-z], no change
     // else, convert to whitespace
-    let str: String = s.iter()
-                        .map(|c| -> char {
-                            if c.is_ascii_uppercase() { c.to_ascii_lowercase() }
-                            else if c.is_ascii_lowercase() { *c }
-                            else { ' ' }})
-                        .collect();
+    let str: String = s
+        .iter()
+        .map(|c| -> char {
+            if c.is_ascii_uppercase() {
+                c.to_ascii_lowercase()
+            } else if c.is_ascii_lowercase() {
+                *c
+            } else {
+                ' '
+            }
+        })
+        .collect();
     t.next("copy");
 
     // tokenize
@@ -53,14 +59,15 @@ pub fn word_counts (s: &Vec<char>, result: &mut Vec<ResultType>) {
     t.next("tokenize");
 
     // define a hash table
-    let mut word_map: HashMap<&str, usize, Djb2Hasher> = 
+    let mut word_map: HashMap<&str, usize, Djb2Hasher> =
         HashMap::with_capacity_and_hasher(tokens.len(), Djb2Hasher::default());
 
     // add each token to the word_map
     for token in tokens {
-        word_map.entry(token)
-                .and_modify(|counter| *counter += 1)// increment by 1 if entry exist
-                .or_insert(1); // else this is first occurance
+        word_map
+            .entry(token)
+            .and_modify(|counter| *counter += 1) // increment by 1 if entry exist
+            .or_insert(1); // else this is first occurance
     }
     t.next("insert into hash table");
 
@@ -68,5 +75,4 @@ pub fn word_counts (s: &Vec<char>, result: &mut Vec<ResultType>) {
         result.push((token.to_string(), count));
     }
     t.next("extract results");
-
 }

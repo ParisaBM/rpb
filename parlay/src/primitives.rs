@@ -211,16 +211,16 @@ where
 
 /* -------------------- Tokens -------------------- */
 
-pub fn tokens<'a, T, G> (r: &'a Vec<T>, is_space: G) -> Vec<&'a [T]>
+pub fn tokens<'a, T, G>(r: &'a Vec<T>, is_space: G) -> Vec<&'a [T]>
 where
     T: Copy + Send + Sync + Default,
     G: Fn(&T) -> bool + Copy + Send + Sync + Sized,
 {
-    let to_tokens = |word: &'a [T]| { word };
+    let to_tokens = |word: &'a [T]| word;
     return map_tokens(&r, to_tokens, is_space);
 }
 
-pub fn map_tokens<'a, T, F, G, R> (r: &'a Vec<T>, f: F, is_space: G) -> Vec<R>
+pub fn map_tokens<'a, T, F, G, R>(r: &'a Vec<T>, f: F, is_space: G) -> Vec<R>
 where
     T: Copy + Send + Sync + Default,
     F: Fn(&'a [T]) -> R + Copy + Send + Sync + Sized,
@@ -234,30 +234,36 @@ where
         return vec![];
     }
 
-    let is_start = |i: usize| -> bool {
-        (i == 0 || is_space(&r[i-1])) && (i != n) && !is_space(&r[i])
-    };
-    let is_end = |i: usize| -> bool {
-        (i == n || is_space(&r[i])) && (i != 0) && !is_space(&r[i-1])
-    };
+    let is_start =
+        |i: usize| -> bool { (i == 0 || is_space(&r[i - 1])) && (i != n) && !is_space(&r[i]) };
+    let is_end =
+        |i: usize| -> bool { (i == n || is_space(&r[i])) && (i != 0) && !is_space(&r[i - 1]) };
 
     // ipair: first = # of tokens so far, second = index of last start
     // g: given 2 ipair, a and b, check if b is a new start
     // if b is a new start, number of tokens ++, set the last seen start to b index
     let g = |a: Ipair, b: Ipair| -> Ipair {
-        if b.0 == 0 { a } else { (a.0 + b.0, b.1) }      
+        if b.0 == 0 {
+            a
+        } else {
+            (a.0 + b.0, b.1)
+        }
     };
 
     // vector storing where the token starts
-    let start_tokens: Vec<Ipair> = 
-        (0..=n)
+    let start_tokens: Vec<Ipair> = (0..=n)
         .into_par_iter()
         .map(|i: usize| -> Ipair {
-                if is_start(i) { (1, i as i64) } // this is a start
-                else { (0, 0) } // not a start
-            })
+            if is_start(i) {
+                (1, i as i64)
+            }
+            // this is a start
+            else {
+                (0, 0)
+            } // not a start
+        })
         .collect();
-    
+
     // offsets.0: cumulative count of # token starts up to (and excluding) char i
     // offsets.1: last start up to (and excluding) char i
     // sum.0 = total number of tokens, sum.1: last token start

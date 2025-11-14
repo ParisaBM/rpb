@@ -169,7 +169,7 @@ pub fn sum_bool_serial(arr: &[bool]) -> usize {
     r
 }
 
-pub fn block_delayed_scan<T, F> (v: &Vec<T>, op: F, identity: T) -> (Vec<T>, T)
+pub fn block_delayed_scan<T, F>(v: &Vec<T>, op: F, identity: T) -> (Vec<T>, T)
 where
     T: Copy + Send + Sync + Default,
     F: Fn(T, T) -> T + Copy + Send + Sync,
@@ -181,15 +181,16 @@ where
     // block_sums: length = number of blocks
     // block_sums[i]: cumulative count of # token starts up to (and excluding) block i
     #[allow(unused_assignments)]
-    let mut block_sums: Vec<T> = vec![identity; n_blocks+1];
+    let mut block_sums: Vec<T> = vec![identity; n_blocks + 1];
 
     if n_blocks > 0 {
-        block_sums = 
-            (0..=n_blocks)
+        block_sums = (0..=n_blocks)
             .into_par_iter()
-            .map( |i| -> T {
+            .map(|i| -> T {
                 // last value is identity, for later scan
-                if i == n_blocks { return identity.clone(); }
+                if i == n_blocks {
+                    return identity.clone();
+                }
 
                 // slide a block from v
                 let start = std::cmp::min(i * bls, n);
@@ -197,8 +198,9 @@ where
 
                 // for each block, initial value is identity,
                 // for each item in block, result = op(std::move(result), *it);
-                v[start..end].iter()
-                             .fold(identity.clone(), |acc, val| op(acc, *val))
+                v[start..end]
+                    .iter()
+                    .fold(identity.clone(), |acc, val| op(acc, *val))
             })
             .collect();
     } else {
@@ -213,16 +215,21 @@ where
 
     // compute offsets for each token
     let offsets: Vec<T> = z_block
-        .map( |(block, sum)| -> Vec<T> {
+        .map(|(block, sum)| -> Vec<T> {
             // initial value is the count of # token starts up to (and excluding) block i
             let mut acc = *sum;
 
             // accumulates within the block
-            block.iter().map( |val| -> T {
-                acc = op(acc, *val);
-                acc
-            }).collect()
-        }).flatten().collect();
+            block
+                .iter()
+                .map(|val| -> T {
+                    acc = op(acc, *val);
+                    acc
+                })
+                .collect()
+        })
+        .flatten()
+        .collect();
 
     (offsets, total)
 }

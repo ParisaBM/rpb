@@ -1,12 +1,12 @@
-use parlay::Timer;
 use parlay::internal::group_by::histogram_by_key;
 use parlay::primitives::tokens;
+use parlay::Timer;
 
 use rayon::prelude::*;
 
 type ResultType = (String, usize);
 
-pub fn word_counts (s: &Vec<char>, result: &mut Vec<ResultType>) {
+pub fn word_counts(s: &Vec<char>, result: &mut Vec<ResultType>) {
     // remove any previous run results from time_loop
     result.clear();
 
@@ -16,12 +16,18 @@ pub fn word_counts (s: &Vec<char>, result: &mut Vec<ResultType>) {
     // if [A-Z], convert to lower case
     // else if [a-z], no change
     // else, convert to whitespace
-    let str: Vec<char> = s.par_iter()
-                            .map(|c| -> char {
-                                if c.is_ascii_uppercase() { c.to_ascii_lowercase() }
-                                else if c.is_ascii_lowercase() { *c }
-                                else { ' ' }})
-                            .collect();
+    let str: Vec<char> = s
+        .par_iter()
+        .map(|c| -> char {
+            if c.is_ascii_uppercase() {
+                c.to_ascii_lowercase()
+            } else if c.is_ascii_lowercase() {
+                *c
+            } else {
+                ' '
+            }
+        })
+        .collect();
     t.next("copy");
 
     // tokenize
@@ -48,5 +54,4 @@ pub fn word_counts (s: &Vec<char>, result: &mut Vec<ResultType>) {
         result.push((token_str, count));
     }
     t.next("extract results");
-
 }
