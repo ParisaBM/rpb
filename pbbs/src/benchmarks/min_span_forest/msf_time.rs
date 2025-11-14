@@ -25,22 +25,28 @@
 // SOFTWARE.
 // ============================================================================
 
-
 use std::time::Duration;
 
-#[path ="mod.rs"] mod msf;
-#[path ="../../misc.rs"] mod misc;
-#[path ="../macros.rs"] mod macros;
-#[path ="../../common/io.rs"] mod io;
-#[path ="../../common/graph.rs"] mod graph;
-#[path ="../../common/graph_io.rs"] mod graph_io;
-#[path ="../../algorithm/union_find.rs"] mod union_find;
+#[path = "../../common/graph.rs"]
+mod graph;
+#[path = "../../common/graph_io.rs"]
+mod graph_io;
+#[path = "../../common/io.rs"]
+mod io;
+#[path = "../macros.rs"]
+mod macros;
+#[path = "../../misc.rs"]
+mod misc;
+#[path = "mod.rs"]
+mod msf;
+#[path = "../../algorithm/union_find.rs"]
+mod union_find;
 
-use misc::*;
 use graph::WghEdgeArray;
-use io::write_slice_to_file_seq;
 use graph_io::read_wgh_edge_array_from_file;
-use msf::{ incremental_msf, serial_msf, inc_msf_mod };
+use io::write_slice_to_file_seq;
+use misc::*;
+use msf::{inc_msf_mod, incremental_msf, serial_msf};
 
 define_args!(Algs::INCREMENTAL);
 
@@ -50,31 +56,29 @@ define_algs!(
     (INCMOD, "incmod")
 );
 
-
-pub fn run(
-    alg: Algs,
-    rounds: usize,
-    ea: WghEdgeArray
-) -> (Vec<DefInt>, Duration)
-{
+pub fn run(alg: Algs, rounds: usize, ea: WghEdgeArray) -> (Vec<DefInt>, Duration) {
     let sf = match alg {
-        Algs::SERIAL => { serial_msf::minimum_spanning_forest },
-        Algs::INCREMENTAL => { incremental_msf::minimum_spanning_forest },
-        Algs::INCMOD => { inc_msf_mod::minimum_spanning_forest },
+        Algs::SERIAL => serial_msf::minimum_spanning_forest,
+        Algs::INCREMENTAL => incremental_msf::minimum_spanning_forest,
+        Algs::INCMOD => inc_msf_mod::minimum_spanning_forest,
     };
 
     let mut r = vec![];
     let mut ea_copy = ea.clone();
-    let ea_copy_shadow = unsafe {
-        (&ea_copy as *const WghEdgeArray).as_ref().unwrap()
-    };
+    let ea_copy_shadow = unsafe { (&ea_copy as *const WghEdgeArray).as_ref().unwrap() };
     let mean = time_loop(
         "msf",
         rounds,
         Duration::new(1, 0),
-        || { if alg == Algs::INCMOD { ea_copy = ea.clone(); }},
-        || { sf(&ea_copy_shadow, &mut r); },
-        || {}
+        || {
+            if alg == Algs::INCMOD {
+                ea_copy = ea.clone();
+            }
+        },
+        || {
+            sf(&ea_copy_shadow, &mut r);
+        },
+        || {},
     );
     (r, mean)
 }
@@ -85,10 +89,5 @@ fn main() {
     let ea = read_wgh_edge_array_from_file(&args.ifname);
     let (r, d) = run(args.algorithm, args.rounds, ea);
 
-    finalize!(
-        args,
-        r,
-        d,
-        write_slice_to_file_seq(&r, args.ofname)
-    );
+    finalize!(args, r, d, write_slice_to_file_seq(&r, args.ofname));
 }

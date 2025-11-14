@@ -27,7 +27,6 @@ use crate::suffix_array;
 
 use crate::DefChar;
 
-
 #[cfg(not(feature = "AW_safe"))]
 pub fn suffix_array(s: &[DefChar], r: &mut [crate::DefInt]) {
     suffix_array::suffix_array(s, r);

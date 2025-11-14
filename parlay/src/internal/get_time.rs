@@ -1,4 +1,4 @@
-use std::time::{ Instant, Duration };
+use std::time::{Duration, Instant};
 // ============================================================================
 // This code is part of RPB.
 // ----------------------------------------------------------------------------
@@ -24,7 +24,6 @@ use std::time::{ Instant, Duration };
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // ============================================================================
-
 
 /// A timer that can be used to time regions of code.
 pub struct Timer<'a> {

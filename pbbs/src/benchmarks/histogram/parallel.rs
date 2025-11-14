@@ -25,15 +25,9 @@ use num_traits::PrimInt;
 // SOFTWARE.
 // ============================================================================
 
-
-use parlay::internal::group_by::histogram_by_index;
 use crate::DefInt;
+use parlay::internal::group_by::histogram_by_index;
 
-
-pub fn hist<T: PrimInt + Default + Send + Sync>(
-    inp: &[T],
-    buckets: usize,
-    res: &mut Vec<T>
-) {
+pub fn hist<T: PrimInt + Default + Send + Sync>(inp: &[T], buckets: usize, res: &mut Vec<T>) {
     histogram_by_index::<T, DefInt>(inp, buckets, res);
 }

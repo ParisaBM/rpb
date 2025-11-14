@@ -31,99 +31,89 @@ mod sng_ind_by;
 
 use num_traits::PrimInt;
 
+use crate::bad_use_rng_ind;
 #[cfg(feature = "sng_ind_safe")]
 use crate::dedup;
 use chunks::ChunksMut;
 use chunks_by::ChunksMutBy;
 use sng_ind::SngInd;
 use sng_ind_by::SngIndBy;
-use crate::bad_use_rng_ind;
-
 
 pub trait EnhancedParallelSlice<'data, T: Send> {
     // Ranged Indirection:
-    fn par_ind_chunks<'offs, O: PrimInt + Sync>(&self, _offsets: &[O])
-    { todo!() }
+    fn par_ind_chunks<'offs, O: PrimInt + Sync>(&self, _offsets: &[O]) {
+        todo!()
+    }
 
     fn par_ind_chunks_mut<'offs, O: PrimInt + Sync>(
         &'data mut self,
         _offsets: &'offs [O],
-    ) -> ChunksMut<'data, 'offs, T, O>
-    { todo!() }
+    ) -> ChunksMut<'data, 'offs, T, O> {
+        todo!()
+    }
 
     fn par_ind_chunks_mut_by<F>(
         &'data mut self,
         _offset: F,
-        _len: usize
+        _len: usize,
     ) -> ChunksMutBy<'data, T, F>
     where
-        F: Fn(usize) -> usize + Send + Sync + Clone
-    { todo!() }
-
+        F: Fn(usize) -> usize + Send + Sync + Clone,
+    {
+        todo!()
+    }
 
     // Single valued Indirection:
-    fn par_ind_iter<'offs, O: PrimInt + Sync>(&self, _offsets: &[O])
-    { todo!() }
+    fn par_ind_iter<'offs, O: PrimInt + Sync>(&self, _offsets: &[O]) {
+        todo!()
+    }
 
     fn par_ind_iter_mut<'offs, O: PrimInt + Sync>(
         &'data mut self,
-        _offsets: &'offs [O]
-    ) -> SngInd<'data, 'offs, T, O>
-    { todo!() }
+        _offsets: &'offs [O],
+    ) -> SngInd<'data, 'offs, T, O> {
+        todo!()
+    }
 
-    fn par_ind_iter_mut_by<F>(
-        &'data mut self,
-        _offset: F,
-        _len: usize
-    ) -> SngIndBy<'data, T, F>
+    fn par_ind_iter_mut_by<F>(&'data mut self, _offset: F, _len: usize) -> SngIndBy<'data, T, F>
     where
-        F: Fn(usize) -> usize + Send + Sync + Clone
-    { todo!() }
+        F: Fn(usize) -> usize + Send + Sync + Clone,
+    {
+        todo!()
+    }
 }
 
-impl<'data, T: Send> EnhancedParallelSlice<'data, T> for [T]
-{
+impl<'data, T: Send> EnhancedParallelSlice<'data, T> for [T] {
     fn par_ind_chunks_mut<'offs, O: PrimInt + Sync>(
         &'data mut self,
-        offsets: &'offs [O]
-    ) -> ChunksMut<'data, 'offs, T, O>
-    {
+        offsets: &'offs [O],
+    ) -> ChunksMut<'data, 'offs, T, O> {
         bad_use_rng_ind();
         assert!(offsets.len() > 0);
         let st = offsets[0].to_usize().unwrap();
         ChunksMut::new(offsets, &mut self[st..])
     }
 
-    fn par_ind_chunks_mut_by<F>(
-        &'data mut self,
-        offset: F,
-        len: usize
-    ) -> ChunksMutBy<'data, T, F>
+    fn par_ind_chunks_mut_by<F>(&'data mut self, offset: F, len: usize) -> ChunksMutBy<'data, T, F>
     where
-        F: Fn(usize) -> usize + Send + Sync + Clone
+        F: Fn(usize) -> usize + Send + Sync + Clone,
     {
         bad_use_rng_ind();
         ChunksMutBy::new(offset.clone(), 0..len, &mut self[offset(0)..])
     }
 
-
     fn par_ind_iter_mut<'offs, O: PrimInt + Sync>(
         &'data mut self,
-        offsets: &'offs [O]
-    ) -> SngInd<'data, 'offs, T, O>
-    {
+        offsets: &'offs [O],
+    ) -> SngInd<'data, 'offs, T, O> {
         #[cfg(feature = "sng_ind_safe")]
         dedup::parallel(offsets, self.len());
         unsafe { SngInd::new(self, offsets) }
     }
 
-    fn par_ind_iter_mut_by<F>(
-        &'data mut self,
-        offset: F,
-        len: usize
-    ) -> SngIndBy<'data, T, F>
+    fn par_ind_iter_mut_by<F>(&'data mut self, offset: F, len: usize) -> SngIndBy<'data, T, F>
     where
-        F: Fn(usize) -> usize + Send + Sync + Clone
+        F: Fn(usize) -> usize + Send + Sync + Clone,
     {
         #[cfg(feature = "sng_ind_safe")]
         dedup::parallel_by(offset.clone(), len, self.len());

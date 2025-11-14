@@ -25,85 +25,128 @@ use std::ops::*;
 // SOFTWARE.
 // ============================================================================
 
-use std::str::FromStr;
-use std::fmt::{Debug, Display, LowerExp};
 use num_traits::Float;
+use std::fmt::{Debug, Display, LowerExp};
+use std::str::FromStr;
 
 use crate::common::io::fmt_f64;
 
-
 const PI: f64 = 3.14159;
-pub trait PointToVec { type Vec; }
+pub trait PointToVec {
+    type Vec;
+}
 
 // *************************************************************
 //    POINTS AND VECTORS (2d)
 // *************************************************************
 
 #[derive(Copy, Clone)]
-pub struct Vector2d<T: Float> { pub x: T, pub y: T }
+pub struct Vector2d<T: Float> {
+    pub x: T,
+    pub y: T,
+}
 
 impl<T: Float> Vector2d<T> {
-    pub fn new(x: T, y:T) -> Self { Self { x, y } }
-    pub fn length(&self) -> T { (self.x*self.x + self.y*self.y).sqrt() }
-    pub fn dot(&self, v: Vector2d<T>) -> T { self.x*v.x + self.y*v.y }
-    pub fn cross(&self, v: Vector2d<T>) -> T { self.x*v.y - self.y*v.x }
+    pub fn new(x: T, y: T) -> Self {
+        Self { x, y }
+    }
+    pub fn length(&self) -> T {
+        (self.x * self.x + self.y * self.y).sqrt()
+    }
+    pub fn dot(&self, v: Vector2d<T>) -> T {
+        self.x * v.x + self.y * v.y
+    }
+    pub fn cross(&self, v: Vector2d<T>) -> T {
+        self.x * v.y - self.y * v.x
+    }
 }
 
 impl<T: Float> Mul<T> for Vector2d<T> {
     type Output = Self;
     fn mul(self, other: T) -> Self {
-        Self {x: self.x * other, y: self.y * other}
+        Self {
+            x: self.x * other,
+            y: self.y * other,
+        }
     }
 }
 
 impl<T: Float> Div<T> for Vector2d<T> {
     type Output = Self;
-    fn div(self, rhs: T) -> Self { Vector2d::new(self.x/rhs, self.y/rhs) }
+    fn div(self, rhs: T) -> Self {
+        Vector2d::new(self.x / rhs, self.y / rhs)
+    }
 }
 
 impl<T: Float> Default for Vector2d<T> {
-    fn default() -> Self { Self { x:T::zero(), y:T::zero() } }
+    fn default() -> Self {
+        Self {
+            x: T::zero(),
+            y: T::zero(),
+        }
+    }
 }
 
-
 #[derive(Copy, Clone)]
-pub struct Point2d<T: Float> { pub x: T, pub y: T }
+pub struct Point2d<T: Float> {
+    pub x: T,
+    pub y: T,
+}
 
-impl<T: Float> PointToVec for Point2d<T> { type Vec = Vector2d<T>; }
+impl<T: Float> PointToVec for Point2d<T> {
+    type Vec = Vector2d<T>;
+}
 
 impl<T: Float> Point2d<T> {
-    pub fn new(x: T, y: T) -> Self { Self { x, y } }
+    pub fn new(x: T, y: T) -> Self {
+        Self { x, y }
+    }
 }
 
 impl<T: Float> Default for Point2d<T> {
-    fn default() -> Self { Self { x:T::zero(), y:T::zero() } }
+    fn default() -> Self {
+        Self {
+            x: T::zero(),
+            y: T::zero(),
+        }
+    }
 }
 
 impl<T: Float> Add<Vector2d<T>> for Point2d<T> {
     type Output = Self;
     fn add(self, other: Vector2d<T>) -> Self {
-        Self {x: self.x+other.x, y: self.y+other.y}
+        Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
     }
 }
 
 impl<T: Float> Sub for Point2d<T> {
     type Output = Vector2d<T>;
     fn sub(self, other: Self) -> Vector2d<T> {
-        Vector2d {x: self.x-other.x, y: self.y-other.y}
+        Vector2d {
+            x: self.x - other.x,
+            y: self.y - other.y,
+        }
     }
 }
 
 impl<T: Float + FromStr> FromStr for Point2d<T>
 where
-    <T as std::str::FromStr>::Err: Debug
+    <T as std::str::FromStr>::Err: Debug,
 {
     type Err = ParsePoint2dError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s: Vec<&str> = s.trim().split_whitespace().collect();
-        if s.len() != 2 { return Err(ParsePoint2dError); }
+        if s.len() != 2 {
+            return Err(ParsePoint2dError);
+        }
         let (a, b) = (s[0].parse(), s[1].parse());
-        if a.is_err() || b.is_err() { return Err(ParsePoint2dError); }
+        if a.is_err() || b.is_err() {
+            return Err(ParsePoint2dError);
+        }
         Ok(Self::new(a.unwrap(), b.unwrap()))
     }
 }
@@ -141,8 +184,6 @@ impl Debug for ParsePoint2dError {
 //    POINTS AND VECTORS (2d)
 // *************************************************************
 
-
-
 // *************************************************************
 //    POINTS AND VECTORS (3d)
 // *************************************************************
@@ -156,17 +197,21 @@ pub struct Point3d<T> {
     pub z: T,
 }
 
-impl<T: Float> PointToVec for Point3d<T> { type Vec = Vector3d<T>; }
+impl<T: Float> PointToVec for Point3d<T> {
+    type Vec = Vector3d<T>;
+}
 
 impl<T: Float> Point3d<T> {
-    pub fn new(x: T, y: T, z: T) -> Self { Self { x, y, z } }
+    pub fn new(x: T, y: T, z: T) -> Self {
+        Self { x, y, z }
+    }
 
     // Returns the vector result of the cross product
-    pub fn cross(self, other:Self) -> Self {
-        Self{
+    pub fn cross(self, other: Self) -> Self {
+        Self {
             x: self.y * other.z - self.z * other.y,
             y: self.z * other.x - self.x * other.z,
-            z: self.x * other.y - self.y * other.x
+            z: self.x * other.y - self.y * other.x,
         }
     }
 
@@ -180,7 +225,11 @@ impl<T: Float> Add<Vector3d<T>> for Point3d<T> {
     type Output = Self;
 
     fn add(self, other: Vector3d<T>) -> Self {
-        Self {x: self.x + other.x, y: self.y + other.y, z: self.z + other.z}
+        Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+            z: self.z + other.z,
+        }
     }
 }
 
@@ -188,7 +237,11 @@ impl<T: Float> Sub for Point3d<T> {
     type Output = Vector3d<T>;
 
     fn sub(self, other: Self) -> Self {
-        Self {x: self.x - other.x, y: self.y - other.y, z: self.z - other.z}
+        Self {
+            x: self.x - other.x,
+            y: self.y - other.y,
+            z: self.z - other.z,
+        }
     }
 }
 
@@ -196,19 +249,25 @@ impl<T: Float> Mul<T> for Vector3d<T> {
     type Output = Self;
 
     fn mul(self, other: T) -> Self {
-        Self {x: self.x * other, y: self.y * other, z: self.z * other}
+        Self {
+            x: self.x * other,
+            y: self.y * other,
+            z: self.z * other,
+        }
     }
 }
 
 impl<T: Float + FromStr> FromStr for Point3d<T>
 where
-    <T as std::str::FromStr>::Err: Debug
+    <T as std::str::FromStr>::Err: Debug,
 {
     type Err = ParsePoint3dError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s: Vec<&str> = s.trim().split_whitespace().collect();
-        if s.len() != 3 { return Err(ParsePoint3dError); }
+        if s.len() != 3 {
+            return Err(ParsePoint3dError);
+        }
         let (a, b, c) = (s[0].parse(), s[1].parse(), s[2].parse());
         if a.is_err() || b.is_err() || c.is_err() {
             Err(ParsePoint3dError)
@@ -246,8 +305,6 @@ impl<T: Float + Display> Display for Point3d<T> {
 //    POINTS AND VECTORS (3d)
 // *************************************************************
 
-
-
 // *************************************************************
 //    TRIANGLES AND RAYS
 // *************************************************************
@@ -255,65 +312,67 @@ impl<T: Float + Display> Display for Point3d<T> {
 pub type Tri = [i32; 3];
 
 #[derive(Clone)]
-pub struct Triangles<P> { pub p: Vec<P>, pub t: Vec<Tri> }
+pub struct Triangles<P> {
+    pub p: Vec<P>,
+    pub t: Vec<Tri>,
+}
 
 impl<P> Triangles<P> {
-    pub fn new(p: Vec<P>, t: Vec<Tri>) -> Self { Self { p, t } }
-    pub fn num_points(&self) -> usize { self.p.len() }
-    pub fn num_triangles(&self) -> usize { self.t.len() }
+    pub fn new(p: Vec<P>, t: Vec<Tri>) -> Self {
+        Self { p, t }
+    }
+    pub fn num_points(&self) -> usize {
+        self.p.len()
+    }
+    pub fn num_triangles(&self) -> usize {
+        self.t.len()
+    }
 }
 
 #[derive(Copy, Clone)]
-pub struct Ray<P> where P: PointToVec {
+pub struct Ray<P>
+where
+    P: PointToVec,
+{
     pub o: P,
     pub d: P::Vec,
 }
 
-impl<P> Ray<P> where P: PointToVec {
-    pub fn new(o: P, d: P::Vec) -> Self { Self { o, d } }
+impl<P> Ray<P>
+where
+    P: PointToVec,
+{
+    pub fn new(o: P, d: P::Vec) -> Self {
+        Self { o, d }
+    }
 }
 
 #[inline(always)]
 pub fn angle<T: Float>(a: Point2d<T>, b: Point2d<T>, c: Point2d<T>) -> T {
-    let (ba, ca) = (b-a, c-a);
+    let (ba, ca) = (b - a, c - a);
     let (lba, lca) = (ba.length(), ca.length());
-    T::from(
-        180.0 / PI * (ba.dot(ca) / (lba*lca)).to_f64().unwrap().acos()
-    ).unwrap()
+    T::from(180.0 / PI * (ba.dot(ca) / (lba * lca)).to_f64().unwrap().acos()).unwrap()
 }
 
 #[inline(always)]
-pub fn min_angle_check<T: Float>(
-    a: Point2d<T>,
-    b: Point2d<T>,
-    c: Point2d<T>,
-    angle: T
-) -> bool {
-    let (ba, ca, cb) = (b-a, c-a, c-b);
+pub fn min_angle_check<T: Float>(a: Point2d<T>, b: Point2d<T>, c: Point2d<T>, angle: T) -> bool {
+    let (ba, ca, cb) = (b - a, c - a, c - b);
     let (lba, lca, lcb) = (ba.length(), ca.length(), cb.length());
     let co = T::from((angle.to_f64().unwrap() * PI / 180.0).cos()).unwrap();
 
-    ba.dot(ca) / (lba * lca) > co
-        || ca.dot(cb) / (lca * lcb) > co
-        || -ba.dot(cb) / (lba * lcb) > co
+    ba.dot(ca) / (lba * lca) > co || ca.dot(cb) / (lca * lcb) > co || -ba.dot(cb) / (lba * lcb) > co
 }
 
 #[inline(always)]
-pub fn triangle_circumcenter<T: Float>(
-    a: Point2d<T>,
-    b: Point2d<T>,
-    c: Point2d<T>
-) -> Point2d<T> {
-    let (v1, v2) = (b-a, c-a);
+pub fn triangle_circumcenter<T: Float>(a: Point2d<T>, b: Point2d<T>, c: Point2d<T>) -> Point2d<T> {
+    let (v1, v2) = (b - a, c - a);
     let (v11, v22) = (v1 * v2.dot(v2), v2 * v1.dot(v1));
 
-    a + Vector2d::new(v22.y - v11.y, v11.x - v22.x)
-        / (T::from(2.0).unwrap() * v1.cross(v2))
+    a + Vector2d::new(v22.y - v11.y, v11.x - v22.x) / (T::from(2.0).unwrap() * v1.cross(v2))
 }
 
 //    TRIANGLES AND RAYS
 // *************************************************************
-
 
 // *************************************************************
 //    GEOMETRY
@@ -325,11 +384,7 @@ pub fn tri_area<T: Float>(a: Point2d<T>, b: Point2d<T>, c: Point2d<T>) -> T {
 }
 
 #[inline(always)]
-pub fn counter_clock_wise<T: Float>(
-    a: Point2d<T>,
-    b: Point2d<T>,
-    c: Point2d<T>
-) -> bool {
+pub fn counter_clock_wise<T: Float>(a: Point2d<T>, b: Point2d<T>, c: Point2d<T>) -> bool {
     (b - a).cross(c - a) > T::zero()
 }
 
@@ -339,12 +394,7 @@ pub fn on_parabola<T: Float>(v: Vector2d<T>) -> Vector3d<T> {
 }
 
 #[inline(always)]
-pub fn in_circle<T: Float>(
-    a: Point2d<T>,
-    b: Point2d<T>,
-    c: Point2d<T>,
-    d: Point2d<T>
-) -> bool {
+pub fn in_circle<T: Float>(a: Point2d<T>, b: Point2d<T>, c: Point2d<T>, d: Point2d<T>) -> bool {
     let ad = on_parabola(a - d);
     let bd = on_parabola(b - d);
     let cd = on_parabola(c - d);

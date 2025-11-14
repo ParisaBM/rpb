@@ -25,7 +25,7 @@ use std::mem::size_of;
 // SOFTWARE.
 // ============================================================================
 
-use std::sync::atomic::{AtomicU8, AtomicU32, AtomicU64, Ordering::SeqCst};
+use std::sync::atomic::{AtomicU32, AtomicU64, AtomicU8, Ordering::SeqCst};
 
 macro_rules! cast {
     ($a: expr, $o: expr, $n: expr, $t: ty) => {
@@ -45,29 +45,34 @@ pub fn atomic_cas<T>(a: &mut T, old: T, new: T) -> bool {
             1 => {
                 let (a_cast, o, n) = cast!(a_ptr, o_ptr, n_ptr, u8);
                 (*(a_cast as *const AtomicU8))
-                    .compare_exchange(o, n, SeqCst, SeqCst).is_ok()
-            },
+                    .compare_exchange(o, n, SeqCst, SeqCst)
+                    .is_ok()
+            }
             4 => {
                 let (a_cast, o, n) = cast!(a_ptr, o_ptr, n_ptr, u32);
                 (*(a_cast as *const AtomicU32))
-                    .compare_exchange(o, n, SeqCst, SeqCst).is_ok()
-            },
+                    .compare_exchange(o, n, SeqCst, SeqCst)
+                    .is_ok()
+            }
             8 => {
                 let (a_cast, o, n) = cast!(a_ptr, o_ptr, n_ptr, u64);
                 (*(a_cast as *const AtomicU64))
-                    .compare_exchange(o, n, SeqCst, SeqCst).is_ok()
-            },
-            _ => { panic!("atomic_cas: not yet implemented for this type!") }
+                    .compare_exchange(o, n, SeqCst, SeqCst)
+                    .is_ok()
+            }
+            _ => {
+                panic!("atomic_cas: not yet implemented for this type!")
+            }
         }
     }
 }
 
-pub fn write_max_i32(a: &mut i32, b: i32) -> bool
-{
+pub fn write_max_i32(a: &mut i32, b: i32) -> bool {
     loop {
         let c = *a;
-        if c >= b { return false; }
-        else if atomic_cas(a, c, b) {
+        if c >= b {
+            return false;
+        } else if atomic_cas(a, c, b) {
             return true;
         }
     }

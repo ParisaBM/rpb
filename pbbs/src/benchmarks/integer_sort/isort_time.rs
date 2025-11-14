@@ -25,30 +25,21 @@
 // SOFTWARE.
 // ============================================================================
 
+#[path = "../../common/io.rs"]
+mod io;
+#[path = "mod.rs"]
+mod isort;
+#[path = "../macros.rs"]
+mod macros;
 
-#[path ="mod.rs"] mod isort;
-#[path ="../macros.rs"] mod macros;
-#[path ="../../common/io.rs"] mod io;
-
-use std::time::Duration;
 use io::{read_big_file_to_vec, write_slice_to_file_seq};
+use std::time::Duration;
 
-define_args!(
-    Algs::PARRADIX,
-    (bits, usize, 0)
-);
+define_args!(Algs::PARRADIX, (bits, usize, 0));
 
-define_algs!(
-    (PARRADIX, "parradix")
-);
+define_algs!((PARRADIX, "parradix"));
 
-pub fn run(
-    alg: Algs,
-    rounds: usize,
-    g: &[u32],
-    bits: usize
-) -> (Vec<u32>, Duration)
-{
+pub fn run(alg: Algs, rounds: usize, g: &[u32], bits: usize) -> (Vec<u32>, Duration) {
     let f = match alg {
         Algs::PARRADIX => isort::parallel_radix_sort::int_sort,
     };
@@ -60,9 +51,13 @@ pub fn run(
         "isort",
         rounds,
         Duration::new(1, 0),
-        || { unsafe { *(r_ptr as *mut Vec<u32>).as_mut().unwrap() = vec![];}},
-        || { f(&g, bits, &mut r); },
-        || {}
+        || unsafe {
+            *(r_ptr as *mut Vec<u32>).as_mut().unwrap() = vec![];
+        },
+        || {
+            f(&g, bits, &mut r);
+        },
+        || {},
     );
 
     (r, mean)
@@ -75,15 +70,12 @@ fn main() {
     let mut arr = Vec::new();
     read_big_file_to_vec(
         &args.ifname,
-        Some { 0: |w: &[&str]| {debug_assert_eq!(w[0], "sequenceInt")} },
-        &mut arr
+        Some {
+            0: |w: &[&str]| debug_assert_eq!(w[0], "sequenceInt"),
+        },
+        &mut arr,
     );
     let (r, d) = run(args.algorithm, args.rounds, &arr, args.bits);
 
-    finalize!(
-        args,
-        r,
-        d,
-        write_slice_to_file_seq(&r, args.ofname)
-    );
+    finalize!(args, r, d, write_slice_to_file_seq(&r, args.ofname));
 }

@@ -25,19 +25,22 @@ mod iter;
 // SOFTWARE.
 // ============================================================================
 
-mod slice;
 mod dedup;
 pub mod prelude;
-
+mod slice;
 
 #[cfg(all(feature = "sng_ind_unsafe", feature = "sng_ind_safe"))]
-compile_error!("Only one of the following features can be enabled:
-    sng_ind_safe, sng_ind_unsafe");
+compile_error!(
+    "Only one of the following features can be enabled:
+    sng_ind_safe, sng_ind_unsafe"
+);
 
 // the unsafe version is the safe version because there are
 // no runtime checks that can be easily avoided.
 pub(crate) fn bad_use_rng_ind() {
     #[cfg(not(feature = "rng_ind_safe"))]
-    eprintln!("Warning: The rng_ind_safe feature is disabled
-    but the safe version is being used!");
+    eprintln!(
+        "Warning: The rng_ind_safe feature is disabled
+    but the safe version is being used!"
+    );
 }

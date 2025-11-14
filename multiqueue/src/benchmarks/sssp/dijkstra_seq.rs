@@ -25,14 +25,13 @@ use std::cmp::Ordering;
 // SOFTWARE.
 // ============================================================================
 
+use clap::Parser;
 use std::collections::BinaryHeap;
 use std::io::Write;
 use std::path::Path;
 use std::time::Instant;
-use clap::Parser;
 
 use multiqueue::util::WghGraph as Graph;
-
 
 #[derive(Eq, PartialEq, Debug)]
 struct ValType(usize, usize);
@@ -49,11 +48,7 @@ impl PartialOrd for ValType {
     }
 }
 
-fn dijkstra(
-    graph: &Graph,
-    pq: &mut BinaryHeap<ValType>,
-    dist: &mut Vec<usize>,
-) {
+fn dijkstra(graph: &Graph, pq: &mut BinaryHeap<ValType>, dist: &mut Vec<usize>) {
     while let Some(val) = pq.pop() {
         for i in graph.nodes[val.1]..graph.nodes[val.1 + 1] {
             let target = graph.edges[i].target;
@@ -68,7 +63,9 @@ fn dijkstra(
 
 fn write_distance<P: AsRef<Path>>(path: P, distance: &[usize]) {
     let mut file = std::fs::File::create(path).unwrap();
-    distance.iter().for_each(|x| writeln!(file, "{}", x).unwrap());
+    distance
+        .iter()
+        .for_each(|x| writeln!(file, "{}", x).unwrap());
 }
 
 #[derive(Parser)]

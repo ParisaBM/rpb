@@ -26,42 +26,45 @@ use rayon::prelude::*;
 // ============================================================================
 
 #[cfg(feature = "AW_safe")]
-use std::sync::atomic::{AtomicBool};
+use std::sync::atomic::AtomicBool;
 
-use parlay::primitives::pack_index;
-use parlay::internal::sample_sort_inplace;
-use crate::{DefInt, DefIntS};
 use crate::graph::WghEdgeArray;
+#[cfg(feature = "AW_safe")]
+use crate::union_find::AtomicUnionFind;
 #[cfg(not(feature = "AW_safe"))]
 use crate::union_find::UnionFind;
 #[cfg(feature = "AW_safe")]
-use crate::union_find::AtomicUnionFind;
-#[cfg(feature = "AW_safe")]
 use crate::ORDER;
+use crate::{DefInt, DefIntS};
+use parlay::internal::sample_sort_inplace;
+use parlay::primitives::pack_index;
 
-#[path="../../common/spec_for.rs"] mod spec_for;
-use spec_for::{SpecFor, Reservation};
-
+#[path = "../../common/spec_for.rs"]
+mod spec_for;
+use spec_for::{Reservation, SpecFor};
 
 pub fn minimum_spanning_forest(wea: &WghEdgeArray, dest: &mut Vec<DefInt>) {
     #[cfg(feature = "AW_safe")]
-    eprintln!("WARNING: AW_safe is enabled, \
-        but this algorithm has an array that requires synchronization.");
+    eprintln!(
+        "WARNING: AW_safe is enabled, \
+        but this algorithm has an array that requires synchronization."
+    );
 
-    let mut t = parlay::Timer::new("msf"); t.start();
+    let mut t = parlay::Timer::new("msf");
+    t.start();
 
     let m = wea.m;
     let n = wea.n;
-    let mut idxs: Vec<_> = (0..m)
-        .into_par_iter()
-        .map(|i| i as DefInt)
-        .collect();
+    let mut idxs: Vec<_> = (0..m).into_par_iter().map(|i| i as DefInt).collect();
     t.next("Creating indices");
 
     let cmp = |i: DefInt, j: DefInt| {
         let (i, j) = (i as usize, j as usize);
-        if wea[i].w == wea[j].w { i < j }
-        else { wea[i].w < wea[j].w }
+        if wea[i].w == wea[j].w {
+            i < j
+        } else {
+            wea[i].w < wea[j].w
+        }
     };
     sample_sort_inplace(&mut idxs, cmp, false);
     t.next("Sorting");
@@ -96,7 +99,9 @@ pub fn minimum_spanning_forest(wea: &WghEdgeArray, dest: &mut Vec<DefInt>) {
             rs[e.v as usize].reserve(idxs[i]);
             rs[e.u as usize].reserve(idxs[i]);
             true
-        } else { false }
+        } else {
+            false
+        }
     };
 
     #[cfg(not(feature = "AW_safe"))]
@@ -107,13 +112,19 @@ pub fn minimum_spanning_forest(wea: &WghEdgeArray, dest: &mut Vec<DefInt>) {
         if rs[v as usize].check(idxs[i]) {
             rs[u as usize].check_reset(idxs[i]);
             luf.link(v as DefIntS, u as DefIntS);
-            unsafe { (_msf_flags_ptr as *mut bool)
-                .add(idxs[i] as usize).write(true); }
+            unsafe {
+                (_msf_flags_ptr as *mut bool)
+                    .add(idxs[i] as usize)
+                    .write(true);
+            }
             true
         } else if rs[u as usize].check(idxs[i]) {
             luf.link(u as DefIntS, v as DefIntS);
-            unsafe { (_msf_flags_ptr as *mut bool)
-                .add(idxs[i] as usize).write(true);}
+            unsafe {
+                (_msf_flags_ptr as *mut bool)
+                    .add(idxs[i] as usize)
+                    .write(true);
+            }
             true
         } else {
             false
@@ -147,10 +158,7 @@ pub fn minimum_spanning_forest(wea: &WghEdgeArray, dest: &mut Vec<DefInt>) {
     t.next("Specualtive For");
 
     #[cfg(feature = "AW_safe")]
-    let msf_flags: Vec<_> = msf_flags
-        .into_par_iter()
-        .map(|f| f.into_inner())
-        .collect();
+    let msf_flags: Vec<_> = msf_flags.into_par_iter().map(|f| f.into_inner()).collect();
     pack_index(&msf_flags, dest);
     t.next("Packing");
 }

@@ -25,40 +25,40 @@ use num_traits::PrimInt;
 // SOFTWARE.
 // ============================================================================
 
-use rayon::prelude::*;
 use rayon::iter::{MaxLen, MinLen};
+use rayon::prelude::*;
 
 mod chunks;
 mod chunks_by;
 
+use crate::bad_use_rng_ind;
 use chunks::Chunks;
 use chunks_by::ChunksBy;
-use crate::bad_use_rng_ind;
-
 
 /// This trait will add support for sng_ind and rng_ind irregular patterns
 /// to all indexed parallel iterators.
 /// `with_gran` conviently sets min and max granularity.
 pub trait EnhancedParallelIterator: IndexedParallelIterator {
-    fn with_gran(self, size: usize) -> MaxLen<MinLen<Self>>{
+    fn with_gran(self, size: usize) -> MaxLen<MinLen<Self>> {
         self.with_min_len(size).with_max_len(size)
     }
 
-    fn sng_ind<OTy>(self, _offsets: &[OTy]) { todo!() }
-    fn sng_ind_by<OTy>(self, _off_key: OTy) { todo!() }
+    fn sng_ind<OTy>(self, _offsets: &[OTy]) {
+        todo!()
+    }
+    fn sng_ind_by<OTy>(self, _off_key: OTy) {
+        todo!()
+    }
 
     fn rng_ind_by<F>(self, offset: F, len: usize) -> ChunksBy<Self, F>
     where
-        F: Fn(usize) -> usize + Send + Clone
+        F: Fn(usize) -> usize + Send + Clone,
     {
         bad_use_rng_ind();
         ChunksBy::new(self, offset, len)
     }
 
-    fn rng_ind<'offs, OTy>(
-        self,
-        offsets: &'offs [OTy]
-    ) -> Chunks<'offs, Self, OTy>
+    fn rng_ind<'offs, OTy>(self, offsets: &'offs [OTy]) -> Chunks<'offs, Self, OTy>
     where
         OTy: PrimInt + Sync,
     {

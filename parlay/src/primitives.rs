@@ -25,15 +25,14 @@ use rayon::prelude::*;
 // SOFTWARE.
 // ============================================================================
 
-use num_traits::PrimInt;
 use enhanced_rayon::prelude::*;
+use num_traits::PrimInt;
 
-use crate::maybe_uninit_vec;
 use crate::internal::sequence_ops::*;
-
+use crate::maybe_uninit_vec;
 
 /* -------------------- Pack -------------------- */
-fn pack_serial_at<T, F>(arr_f: F, flags:&[bool], dest: &mut [T]) -> usize
+fn pack_serial_at<T, F>(arr_f: F, flags: &[bool], dest: &mut [T]) -> usize
 where
     T: Copy,
     F: Fn(usize) -> T,
@@ -49,7 +48,7 @@ where
     k
 }
 
-pub fn pack_serial<T, F>(arr_f: F, flags:&[bool], dest: &mut Vec<T>)
+pub fn pack_serial<T, F>(arr_f: F, flags: &[bool], dest: &mut Vec<T>)
 where
     T: Copy + Clone,
     F: Fn(usize) -> T,
@@ -59,14 +58,14 @@ where
     pack_serial_at(arr_f, flags, dest);
 }
 
-fn pack_helper<T, F>(arr_f: F, flags:&[bool], dest: &mut Vec<T>)
+fn pack_helper<T, F>(arr_f: F, flags: &[bool], dest: &mut Vec<T>)
 where
     T: Copy + Clone + Send + Sync,
     F: Fn(usize) -> T + Send + Sync,
 {
     let n = flags.len();
     let bls = _BLOCK_SIZE * 10;
-    let block_no =  num_blocks(n, bls);
+    let block_no = num_blocks(n, bls);
     if block_no == 1 {
         pack_serial(arr_f, flags, dest);
         return;
@@ -81,8 +80,7 @@ where
 
     *dest = maybe_uninit_vec![arr_f(0); m];
 
-    dest
-        .par_ind_chunks_mut(&sums)
+    dest.par_ind_chunks_mut(&sums)
         .zip(flags.par_chunks(bls))
         .enumerate()
         .for_each(|(i, (out_chunk, flag_chunk))| {
@@ -92,30 +90,30 @@ where
         });
 }
 
-pub fn pack<T>(arr: &[T], flags:&[bool], dest: &mut Vec<T>)
+pub fn pack<T>(arr: &[T], flags: &[bool], dest: &mut Vec<T>)
 where
-    T: Copy + Send + Sync + Clone
+    T: Copy + Send + Sync + Clone,
 {
     if arr.len() > 0 {
         let arr_f = |i| arr[i];
         pack_helper(arr_f, flags, dest);
-    } else { *dest = vec![]; }
+    } else {
+        *dest = vec![];
+    }
 }
-
 
 pub fn pack_index<T>(flags: &[bool], dest: &mut Vec<T>)
 where
-    T: Copy + Send + Sync + Clone + PrimInt
+    T: Copy + Send + Sync + Clone + PrimInt,
 {
     debug_assert_ne!(flags.len(), 0);
     let arr_f = |i| T::from(i).expect("pack_index: invalid conversion");
     pack_helper(arr_f, flags, dest);
 }
 
-
 // non copy version of pack:
 // =========================
-unsafe fn nc_pack_serial_at<T, F>(arr_f: F, flags:&[bool], dest: &mut [T])
+unsafe fn nc_pack_serial_at<T, F>(arr_f: F, flags: &[bool], dest: &mut [T])
 where
     F: Fn(usize, *mut T),
 {
@@ -128,7 +126,7 @@ where
     }
 }
 
-pub unsafe fn nc_pack_serial<T, F>(arr_f: F, flags:&[bool], dest: &mut Vec<T>)
+pub unsafe fn nc_pack_serial<T, F>(arr_f: F, flags: &[bool], dest: &mut Vec<T>)
 where
     F: Fn(usize, *mut T),
 {
@@ -138,15 +136,18 @@ where
     nc_pack_serial_at(arr_f, flags, dest);
 }
 
-unsafe fn nc_pack_helper<T, F>(arr_f: F, flags:&[bool], dest: &mut Vec<T>)
+unsafe fn nc_pack_helper<T, F>(arr_f: F, flags: &[bool], dest: &mut Vec<T>)
 where
     T: Send + Sync,
     F: Fn(usize, *mut T) + Send + Sync,
 {
     let n = flags.len();
     let bls = _BLOCK_SIZE * 10;
-    let block_no =  num_blocks(n, bls);
-    if block_no == 1 { nc_pack_serial(arr_f, flags, dest); return; }
+    let block_no = num_blocks(n, bls);
+    if block_no == 1 {
+        nc_pack_serial(arr_f, flags, dest);
+        return;
+    }
 
     let mut sums: Vec<usize> = flags
         .par_chunks(bls)
@@ -157,8 +158,7 @@ where
     *dest = Vec::with_capacity(m);
     dest.set_len(m);
 
-    dest
-        .par_ind_chunks_mut(&sums)
+    dest.par_ind_chunks_mut(&sums)
         .zip(flags.par_chunks(bls))
         .enumerate()
         .for_each(|(i, (out_chunk, flag_chunk))| {
@@ -168,13 +168,14 @@ where
         });
 }
 
-pub unsafe fn nc_pack<T>(arr: &[T], flags:&[bool], dest: &mut Vec<T>)
+pub unsafe fn nc_pack<T>(arr: &[T], flags: &[bool], dest: &mut Vec<T>)
 where
-    T: Send + Sync
+    T: Send + Sync,
 {
-    if arr.len() == 0 { *dest = vec![]; }
-    else {
-        let arr_f = |i, d: *mut T| {std::ptr::copy(&arr[i] as *const T, d, 1)};
+    if arr.len() == 0 {
+        *dest = vec![];
+    } else {
+        let arr_f = |i, d: *mut T| std::ptr::copy(&arr[i] as *const T, d, 1);
         nc_pack_helper(arr_f, flags, dest);
     }
 }
@@ -190,8 +191,7 @@ where
     let len = scan_inplace(&mut offsets, false, |a, b| a + b);
 
     *dest = maybe_uninit_vec![T::default(); len];
-    dest
-        .par_ind_chunks_mut(&offsets)
+    dest.par_ind_chunks_mut(&offsets)
         .zip(arr.par_iter())
         .for_each(|(out_chunk, a)| {
             (*a, out_chunk)
@@ -201,7 +201,8 @@ where
         });
 }
 
-pub fn flatten_by_val<T>(arr: &[Vec<T>], dest: &mut Vec<T>) where
+pub fn flatten_by_val<T>(arr: &[Vec<T>], dest: &mut Vec<T>)
+where
     T: Copy + Send + Sync + Default,
 {
     let ref_arr: Vec<_> = arr.iter().map(|a| a).collect();

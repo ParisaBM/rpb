@@ -40,7 +40,8 @@ pub fn num_blocks(n: usize, block_size: usize) -> usize {
 }
 
 /// reduce array `arr` using a binary associative operator `op` in serial
-pub fn reduce_serial<T, F>(arr: &[T], op: F) -> T where
+pub fn reduce_serial<T, F>(arr: &[T], op: F) -> T
+where
     T: Default + Copy,
     F: Fn(T, T) -> T,
 {
@@ -50,7 +51,8 @@ pub fn reduce_serial<T, F>(arr: &[T], op: F) -> T where
 }
 
 /// reduce array `arr` using a binary associative operator `op` in parallel
-pub fn reduce<T, F>(arr: &[T], op: F) -> T where
+pub fn reduce<T, F>(arr: &[T], op: F) -> T
+where
     T: Default + Copy + Send + Sync,
     F: Fn(T, T) -> T + Clone + Send + Sync,
 {
@@ -64,57 +66,41 @@ pub fn reduce<T, F>(arr: &[T], op: F) -> T where
             // break into blocks and calculate prefix sum of each block
             let sums: Vec<T> = arr
                 .par_chunks(block_size)
-                .map(|chunk| {
-                    reduce_serial(chunk, op.clone())
-                }).collect();
+                .map(|chunk| reduce_serial(chunk, op.clone()))
+                .collect();
 
             // calculate prefix sum of the block sums
             reduce(&sums, op)
-        },
+        }
     }
 }
 
 /// scan operation on `arr` using a binary associative operator `op` in serial
-pub fn scan_serial<T, F>(
-    inp: &[T],
-    out: &mut [T],
-    offset: T,
-    inclusive: bool,
-    op: F
-) -> T where
+pub fn scan_serial<T, F>(inp: &[T], out: &mut [T], offset: T, inclusive: bool, op: F) -> T
+where
     T: Copy + Clone,
     F: Fn(T, T) -> T,
 {
     let mut r = offset;
     if inclusive {
-        inp
-            .iter()
-            .zip(out.iter_mut())
-            .for_each(|(x, y)| {
-                r = op(r, *x);
-                *y = r;
-            });
+        inp.iter().zip(out.iter_mut()).for_each(|(x, y)| {
+            r = op(r, *x);
+            *y = r;
+        });
     } else {
-        inp
-            .iter()
-            .zip(out.iter_mut())
-            .for_each(|(x, y)| {
-                let t = *x; // to work when inp == out
-                *y = r;
-                r = op(r, t);
-            });
+        inp.iter().zip(out.iter_mut()).for_each(|(x, y)| {
+            let t = *x; // to work when inp == out
+            *y = r;
+            r = op(r, t);
+        });
     }
     r
 }
 
 /// scan operation on `arr` using a binary associative operator `op` in serial
 /// this version is inplace and uses the same array for input and output
-pub fn scan_serial_inplace<T, F>(
-    inp: &mut [T],
-    offset: T,
-    inclusive: bool,
-    op: F
-) -> T where
+pub fn scan_serial_inplace<T, F>(inp: &mut [T], offset: T, inclusive: bool, op: F) -> T
+where
     T: Copy + Clone,
     F: Fn(T, T) -> T,
 {
@@ -138,16 +124,19 @@ where
 
     // break into blocks and calculate prefix sum of each block
     let mut sums: Vec<T> = inp
-        .par_chunks(_BLOCK_SIZE).map(|chunk| {
-            reduce_serial(chunk, op.clone())
-        }).collect();
+        .par_chunks(_BLOCK_SIZE)
+        .map(|chunk| reduce_serial(chunk, op.clone()))
+        .collect();
 
     // perform a scan on block sums to get the each block's offset
-    let blk_offset =
-        scan_serial_inplace(&mut sums, T::default(), false, op.clone());
+    let blk_offset = scan_serial_inplace(&mut sums, T::default(), false, op.clone());
 
     // scan each block in parallel with its offset
-    (inp.par_chunks(_BLOCK_SIZE), out.par_chunks_mut(_BLOCK_SIZE), sums)
+    (
+        inp.par_chunks(_BLOCK_SIZE),
+        out.par_chunks_mut(_BLOCK_SIZE),
+        sums,
+    )
         .into_par_iter()
         .for_each(|(in_chunk, l_out, sum)| {
             scan_serial(in_chunk, l_out, sum, inclusive, op.clone());
@@ -172,7 +161,10 @@ pub fn sum_bool_serial(arr: &[bool]) -> usize {
     let mut r = 0;
     let n = arr.len();
     let mut i = 0;
-    while i < n { r += arr[i] as usize; i+=1; }
+    while i < n {
+        r += arr[i] as usize;
+        i += 1;
+    }
 
     r
 }

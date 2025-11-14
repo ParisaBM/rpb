@@ -25,9 +25,8 @@ use std::ops::Range;
 // SOFTWARE.
 // ============================================================================
 
-use rayon::iter::*;
 use rayon::iter::plumbing::*;
-
+use rayon::iter::*;
 
 /// Single indirect Parallel iterator over mutable items in a slice
 #[derive(Debug)]
@@ -43,7 +42,11 @@ where
     O: Fn(usize) -> usize + Send + Clone,
 {
     pub(super) unsafe fn new(slice: &'data mut [T], offset: O, len: usize) -> Self {
-        Self { slice, offset, range: 0..len }
+        Self {
+            slice,
+            offset,
+            range: 0..len,
+        }
     }
 }
 
@@ -117,23 +120,19 @@ where
     }
 
     fn split_at(self, index: usize) -> (Self, Self) {
-        let slice_copy = unsafe {
-            std::slice::from_raw_parts_mut(
-                self.slice.as_mut_ptr(),
-                self.slice.len(),
-            )
-        };
+        let slice_copy =
+            unsafe { std::slice::from_raw_parts_mut(self.slice.as_mut_ptr(), self.slice.len()) };
         let bias = self.range.start;
         (
             SngIndByProducer {
                 slice: self.slice,
                 offset: self.offset.clone(),
-                range: bias..bias+index
+                range: bias..bias + index,
             },
             SngIndByProducer {
                 slice: slice_copy,
                 offset: self.offset,
-                range: bias+index..self.range.end
+                range: bias + index..self.range.end,
             },
         )
     }
@@ -146,9 +145,9 @@ pub(super) struct SngIndBySeq<'data, T, O> {
     range: Range<usize>,
 }
 
-impl <'data, T, O> Iterator for SngIndBySeq<'data, T, O>
+impl<'data, T, O> Iterator for SngIndBySeq<'data, T, O>
 where
-    O: Fn(usize) -> usize + Send + Clone
+    O: Fn(usize) -> usize + Send + Clone,
 {
     type Item = &'data mut T;
 
@@ -156,7 +155,7 @@ where
         if self.range.len() != 0 {
             let idx = (self.offset)(self.range.start);
             let r = unsafe { self.slice.as_mut_ptr().add(idx).as_mut().unwrap() };
-            self.range = self.range.start+1..self.range.end;
+            self.range = self.range.start + 1..self.range.end;
             Some(r)
         } else {
             None
@@ -169,24 +168,24 @@ where
     }
 }
 
-impl <'data, T, O> ExactSizeIterator for SngIndBySeq<'data, T, O>
+impl<'data, T, O> ExactSizeIterator for SngIndBySeq<'data, T, O>
 where
-    O: Fn(usize) -> usize + Send + Clone
+    O: Fn(usize) -> usize + Send + Clone,
 {
     fn len(&self) -> usize {
         self.range.len()
     }
 }
 
-impl <'data, T, O> DoubleEndedIterator for SngIndBySeq<'data, T, O>
+impl<'data, T, O> DoubleEndedIterator for SngIndBySeq<'data, T, O>
 where
-    O: Fn(usize) -> usize + Send + Clone
+    O: Fn(usize) -> usize + Send + Clone,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         match self.range.len() {
             0 => None,
             _ => {
-                let last = self.range.end-1;
+                let last = self.range.end - 1;
                 let idx = (self.offset)(last);
                 let r = unsafe { self.slice.as_mut_ptr().add(idx).as_mut().unwrap() };
                 self.range = self.range.start..last;

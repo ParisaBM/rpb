@@ -27,7 +27,6 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use num_traits::PrimInt;
 
-
 /// returns the smallest power of two greater than or equal to i.
 pub fn log2_up<T: PrimInt>(i: T) -> usize {
     debug_assert!(i > T::zero());
@@ -57,8 +56,7 @@ pub fn hash64(u: u64) -> u64 {
 
 /// calculates a hash of x that is cheaper than `hash64` based on splitmix64.
 #[inline(always)]
-pub fn hash64_cheap(mut x: u64) -> u64
-{
+pub fn hash64_cheap(mut x: u64) -> u64 {
     x = (x ^ (x >> 30)).overflowing_mul(0xbf58476d1ce4e5b9).0;
     x = (x ^ (x >> 27)).overflowing_mul(0x94d049bb133111eb).0;
     x = x ^ (x >> 31);
@@ -71,13 +69,10 @@ pub fn hash64_cheap(mut x: u64) -> u64
 pub fn write_min(a: &AtomicU32, b: u32) -> bool {
     let mut c = a.load(Ordering::Relaxed);
     while b < c {
-        match a.compare_exchange_weak(
-            c,
-            b,
-            Ordering::Relaxed,
-            Ordering::Relaxed
-        ) {
-            Ok(_) => { return true; },
+        match a.compare_exchange_weak(c, b, Ordering::Relaxed, Ordering::Relaxed) {
+            Ok(_) => {
+                return true;
+            }
             Err(new) => c = new,
         }
     }

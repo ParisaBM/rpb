@@ -25,7 +25,6 @@ use crate::utilities::hash64;
 // SOFTWARE.
 // ============================================================================
 
-
 /// A simple random number generator.
 pub struct Random {
     state: u64,

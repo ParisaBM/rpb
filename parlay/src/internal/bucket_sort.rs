@@ -25,31 +25,24 @@ use rayon::prelude::*;
 // SOFTWARE.
 // ============================================================================
 
-
-use enhanced_rayon::prelude::*;
+use crate::internal::{merge_sort_, quick_sort};
 use crate::maybe_uninit_vec;
-use crate::internal::{quick_sort, merge_sort_};
 use crate::utilities::hash64;
+use enhanced_rayon::prelude::*;
 
-
-fn radix_step<T: Copy>(
-    inp: &[T],
-    out: &mut [T],
-    keys: &[u8],
-    counts: &mut [usize]
-) {
-    counts.iter_mut().for_each(|c| *c=0);
+fn radix_step<T: Copy>(inp: &[T], out: &mut [T], keys: &[u8], counts: &mut [usize]) {
+    counts.iter_mut().for_each(|c| *c = 0);
     keys.iter().for_each(|&k| counts[k as usize] += 1);
     let mut s = 0;
-    counts.iter_mut().for_each(|c| { s += *c; *c = s; });
-    keys
-        .iter()
-        .zip(inp.iter())
-        .for_each(|(&k, &v)| {
-            let c = &mut counts[k as usize];
-            *c -= 1;
-            out[*c] = v;
-        });
+    counts.iter_mut().for_each(|c| {
+        s += *c;
+        *c = s;
+    });
+    keys.iter().zip(inp.iter()).for_each(|(&k, &v)| {
+        let c = &mut counts[k as usize];
+        *c -= 1;
+        out[*c] = v;
+    });
 }
 
 /// Given the sequence In[l, r), write to Out, the values of
@@ -63,28 +56,20 @@ fn radix_step<T: Copy>(
 /// i.e. the root of the tree is at index 0, and the left
 /// and right children of the node at index i are at indices
 /// 2i+1 and 2i+2 respectively.
-fn to_balanced_tree<T: Copy>(
-    inp: &[T],
-    out: &mut [T],
-    root: usize,
-    l: usize,
-    r: usize
-) {
+fn to_balanced_tree<T: Copy>(inp: &[T], out: &mut [T], root: usize, l: usize, r: usize) {
     let n = r - l;
     let m = l + n / 2;
     out[root] = inp[m];
-    if n == 1 { return; }
+    if n == 1 {
+        return;
+    }
     to_balanced_tree(inp, out, 2 * root + 1, l, m);
     to_balanced_tree(inp, out, 2 * root + 2, m + 1, r);
 }
 
 // returns true if all equal
-fn get_buckets<T, F>(
-    inp: &[T],
-    buckets: &mut [u8],
-    less: F,
-    rounds: usize
-) -> bool where
+fn get_buckets<T, F>(inp: &[T], buckets: &mut [u8], less: F, rounds: usize) -> bool
+where
     T: Copy + Sync,
     F: Fn(T, T) -> bool + Copy + Sync,
 {
@@ -103,9 +88,11 @@ fn get_buckets<T, F>(
     quick_sort(&mut sample_set, |a, b| less(inp[a], inp[b]));
 
     let pivots: Vec<_> = (0..num_pivots)
-        .map(|i| sample_set[over_sample * (i+1)])
+        .map(|i| sample_set[over_sample * (i + 1)])
         .collect();
-    if !less(inp[pivots[0]], inp[pivots[num_pivots-1]]) { return true; }
+    if !less(inp[pivots[0]], inp[pivots[num_pivots - 1]]) {
+        return true;
+    }
 
     let pivot_tree = &mut sample_set;
     to_balanced_tree(&pivots, pivot_tree, 0, 0, num_pivots);
@@ -122,13 +109,8 @@ fn get_buckets<T, F>(
     false
 }
 
-fn base_sort<T, F>(
-    inp: &mut [T],
-    out: &mut [T],
-    less: F,
-    stable: bool,
-    inplace: bool
-) where
+fn base_sort<T, F>(inp: &mut [T], out: &mut [T], less: F, stable: bool, inplace: bool)
+where
     T: Copy + Send + Sync,
     F: Fn(T, T) -> bool + Copy + Send + Sync,
 {
@@ -136,17 +118,14 @@ fn base_sort<T, F>(
         merge_sort_(inp, out, less, inplace);
     } else {
         quick_sort(inp, less);
-        if !inplace { out.copy_from_slice(inp); }
+        if !inplace {
+            out.copy_from_slice(inp);
+        }
     }
 }
 
-pub fn bucket_sort_r<T, F>(
-    inp: &mut [T],
-    out: &mut [T],
-    less: F,
-    stable: bool,
-    inplace: bool
-) where
+pub fn bucket_sort_r<T, F>(inp: &mut [T], out: &mut [T], less: F, stable: bool, inplace: bool)
+where
     T: Copy + Send + Sync,
     F: Fn(T, T) -> bool + Copy + Send + Sync,
 {
@@ -162,8 +141,7 @@ pub fn bucket_sort_r<T, F>(
             base_sort(inp, out, less, stable, inplace);
         } else {
             radix_step(inp, out, &mut buckets, &mut counts);
-            out
-                .par_ind_chunks_mut(&counts)
+            out.par_ind_chunks_mut(&counts)
                 .zip(inp.par_ind_chunks_mut(&counts))
                 .for_each(|(o, i)| {
                     bucket_sort_r(o, i, less, stable, !inplace);
@@ -177,7 +155,9 @@ where
     T: Copy + Send + Sync,
     F: Fn(T, T) -> bool + Copy + Send + Sync,
 {
-    if inp.len() < 2 { return; }
+    if inp.len() < 2 {
+        return;
+    }
     let n = inp.len();
     let mut tmp = maybe_uninit_vec![inp[0]; n];
     bucket_sort_r(inp, &mut tmp, less, stable, true);

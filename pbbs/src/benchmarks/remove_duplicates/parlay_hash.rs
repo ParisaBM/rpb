@@ -25,11 +25,8 @@ use num_traits::PrimInt;
 // SOFTWARE.
 // ============================================================================
 
-
 use parlay::internal::group_by::remove_duplicates;
 
-
-pub fn dedup<T: PrimInt + Default + Send + Sync>(inp: &[T], res: &mut Vec<T>)
-{
+pub fn dedup<T: PrimInt + Default + Send + Sync>(inp: &[T], res: &mut Vec<T>) {
     remove_duplicates(inp, res);
 }

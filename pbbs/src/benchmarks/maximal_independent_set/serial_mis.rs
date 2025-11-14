@@ -25,7 +25,6 @@ use crate::graph::Graph;
 // SOFTWARE.
 // ============================================================================
 
-
 // For each vertex:
 //   Flags = 0 indicates undecided
 //   Flags = 1 indicates chosen

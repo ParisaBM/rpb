@@ -49,28 +49,20 @@ where
     T: std::string::ToString,
     F: AsRef<std::path::Path>,
 {
-    let s: Vec<String> = s
-        .into_iter()
-        .map(T::to_string)
-        .collect();
-    fs::write(
-        of,
-        s.join("\n")
-    ).expect("cannot write to output");
+    let s: Vec<String> = s.into_iter().map(T::to_string).collect();
+    fs::write(of, s.join("\n")).expect("cannot write to output");
 }
 
 #[allow(dead_code)]
 pub(crate) fn read_file_to_vec_seq<T, P>(fname: P) -> Vec<T>
 where
     T: std::str::FromStr,
-    <T as std::str::FromStr>::Err : std::fmt::Debug,
-    P: AsRef<std::path::Path>
+    <T as std::str::FromStr>::Err: std::fmt::Debug,
+    P: AsRef<std::path::Path>,
 {
-    let s = fs::read_to_string(fname)
-        .expect("cannot read input file");
+    let s = fs::read_to_string(fname).expect("cannot read input file");
     let w: Vec<_> = s.split('\n').collect();
-    w
-        .into_iter()
+    w.into_iter()
         .map(str::parse)
         .filter(Result::is_ok)
         .map(Result::unwrap)
@@ -78,23 +70,19 @@ where
 }
 
 #[allow(dead_code)]
-pub(crate) fn read_file_to_vec<T, P, F>(
-    fname: P,
-    debug_assert: Option<F>
-) -> Vec<T> where
+pub(crate) fn read_file_to_vec<T, P, F>(fname: P, debug_assert: Option<F>) -> Vec<T>
+where
     T: std::str::FromStr + Send,
-    <T as std::str::FromStr>::Err : std::fmt::Debug + Send,
+    <T as std::str::FromStr>::Err: std::fmt::Debug + Send,
     P: AsRef<std::path::Path>,
     F: Fn(&[&str]),
 {
-    let s = fs::read_to_string(fname)
-        .expect("cannot read input file");
+    let s = fs::read_to_string(fname).expect("cannot read input file");
     let w: Vec<_> = s.par_split('\n').collect();
     if debug_assert.is_some() {
         debug_assert.unwrap()(&w);
     }
-    w
-        .into_par_iter()
+    w.into_par_iter()
         .map(str::parse)
         .filter(Result::is_ok)
         .map(Result::unwrap)
@@ -102,13 +90,10 @@ pub(crate) fn read_file_to_vec<T, P, F>(
 }
 
 #[allow(dead_code)]
-pub(crate) fn read_big_file_to_vec<T, P, F>(
-    fname: P,
-    debug_assert: Option<F>,
-    dest: &mut Vec<T>
-) where
+pub(crate) fn read_big_file_to_vec<T, P, F>(fname: P, debug_assert: Option<F>, dest: &mut Vec<T>)
+where
     T: std::str::FromStr + Send,
-    <T as std::str::FromStr>::Err : std::fmt::Debug + Send,
+    <T as std::str::FromStr>::Err: std::fmt::Debug + Send,
     P: AsRef<std::path::Path>,
     F: Fn(&[&str]),
 {
@@ -127,22 +112,19 @@ pub(crate) fn read_big_file_to_vec<T, P, F>(
 #[allow(dead_code)]
 pub(crate) fn chars_from_file<P: AsRef<std::path::Path>>(
     fname: P,
-    null_terminate: bool
-) -> io::Result<Vec<u8>>
-{
+    null_terminate: bool,
+) -> io::Result<Vec<u8>> {
     let mut f = fs::File::open(fname)?;
     let mut buffer = Vec::new();
     f.read_to_end(&mut buffer)?;
-    if null_terminate { buffer.push(0); }
+    if null_terminate {
+        buffer.push(0);
+    }
     Ok(buffer)
 }
 
 #[allow(dead_code)]
-pub(crate) fn chars_to_file<P: AsRef<std::path::Path>>(
-    buffer: &[u8],
-    fname: P
-) -> io::Result<()>
-{
+pub(crate) fn chars_to_file<P: AsRef<std::path::Path>>(buffer: &[u8], fname: P) -> io::Result<()> {
     let mut f = fs::File::create(fname)?;
     f.write_all(buffer)?;
     Ok(())

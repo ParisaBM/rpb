@@ -25,33 +25,35 @@
 // SOFTWARE.
 // ============================================================================
 
-
 use std::time::Duration;
 
-#[path ="mod.rs"] mod mm;
-#[path ="../../misc.rs"] mod misc;
-#[path ="../macros.rs"] mod macros;
-#[path ="../../common/io.rs"] mod io;
-#[path ="../../common/graph.rs"] mod graph;
-#[path ="../../common/graph_io.rs"] mod graph_io;
+#[path = "../../common/graph.rs"]
+mod graph;
+#[path = "../../common/graph_io.rs"]
+mod graph_io;
+#[path = "../../common/io.rs"]
+mod io;
+#[path = "../macros.rs"]
+mod macros;
+#[path = "../../misc.rs"]
+mod misc;
+#[path = "mod.rs"]
+mod mm;
 
-use misc::*;
 use graph::EdgeArray;
-use io::write_slice_to_file_seq;
 use graph_io::read_edge_array_from_file;
-use mm::{ rusty_incremental_mm, serial_mm };
+use io::write_slice_to_file_seq;
+use misc::*;
+use mm::{rusty_incremental_mm, serial_mm};
 
 define_args!(Algs::RUSTINC);
 
-define_algs!(
-    (SERIAL, "serial"),
-    (RUSTINC, "rustinc")
-);
+define_algs!((SERIAL, "serial"), (RUSTINC, "rustinc"));
 
 pub fn run(alg: Algs, rounds: usize, ea: EdgeArray) -> (Vec<DefInt>, Duration) {
     let mm = match alg {
-        Algs::SERIAL    =>  serial_mm::maximal_matching,
-        Algs::RUSTINC   =>  rusty_incremental_mm::maximal_matching,
+        Algs::SERIAL => serial_mm::maximal_matching,
+        Algs::RUSTINC => rusty_incremental_mm::maximal_matching,
     };
 
     let mut r = vec![];
@@ -61,8 +63,10 @@ pub fn run(alg: Algs, rounds: usize, ea: EdgeArray) -> (Vec<DefInt>, Duration) {
         rounds,
         Duration::new(1, 0),
         || {},
-        || { r = mm(&ea); },
-        || {}
+        || {
+            r = mm(&ea);
+        },
+        || {},
     );
     (r, mean)
 }
@@ -74,10 +78,5 @@ fn main() {
     let g = read_edge_array_from_file(&args.ifname);
     let (r, d) = run(args.algorithm, args.rounds, g);
 
-    finalize!(
-        args,
-        r,
-        d,
-        write_slice_to_file_seq(&r, args.ofname)
-    );
+    finalize!(args, r, d, write_slice_to_file_seq(&r, args.ofname));
 }

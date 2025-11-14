@@ -25,13 +25,11 @@ use rayon::prelude::*;
 // SOFTWARE.
 // ============================================================================
 
-
 mod suffix_array;
 
 use crate::{DefChar, DefInt};
-use suffix_array::suffix_array;
 use parlay::maybe_uninit_vec;
-
+use suffix_array::suffix_array;
 
 pub fn bw_encode(s: &[DefChar]) -> Vec<DefChar> {
     let n = s.len();
@@ -44,8 +42,15 @@ pub fn bw_encode(s: &[DefChar]) -> Vec<DefChar> {
     let mut sa: Vec<DefInt> = maybe_uninit_vec![0; n+1];
     suffix_array(&ss, &mut sa);
 
-    (0..n+1).into_par_iter().map(|i| {
-        let j = sa[i];
-        if j==0 { ss[n] } else { ss[j as usize - 1] }
-    }).collect()
+    (0..n + 1)
+        .into_par_iter()
+        .map(|i| {
+            let j = sa[i];
+            if j == 0 {
+                ss[n]
+            } else {
+                ss[j as usize - 1]
+            }
+        })
+        .collect()
 }

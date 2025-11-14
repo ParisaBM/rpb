@@ -25,60 +25,65 @@ use std::mem::MaybeUninit;
 // SOFTWARE.
 // ============================================================================
 
-use std::sync::atomic::AtomicU32;
-use rayon::prelude::*;
-use num_traits::PrimInt;
 use num_traits::cast::{FromPrimitive, ToPrimitive};
+use num_traits::PrimInt;
+use rayon::prelude::*;
+use std::sync::atomic::AtomicU32;
 
-use parlay::utilities::log2_up;
 use crate::ORDER;
-
+use parlay::utilities::log2_up;
 
 #[allow(dead_code)]
-pub struct RangeMin<'a, T, F> where
-{
+pub struct RangeMin<'a, T, F> {
     arr: &'a [T],
     table: Vec<Vec<T>>,
     less: F,
     block_size: usize,
 }
 
-impl<'a, T, F> RangeMin<'a, T, F> where
+impl<'a, T, F> RangeMin<'a, T, F>
+where
     T: PrimInt + FromPrimitive + Send + Sync,
     F: Fn(&T, &T) -> bool + Clone + Copy + Send + Sync,
 {
     #[inline(always)]
-    fn min_idx(&self, i: T, j: T) -> T where
-    {
+    fn min_idx(&self, i: T, j: T) -> T where {
         if (self.less)(
             &self.arr[j.to_usize().unwrap()],
-            &self.arr[i.to_usize().unwrap()]
-        ) { j } else { i }
+            &self.arr[i.to_usize().unwrap()],
+        ) {
+            j
+        } else {
+            i
+        }
     }
 
     pub fn new(a: &'a [T], less: F, block_size: usize) -> Self {
         let n = a.len();
-        let m = 1 + (n-1) / block_size;
+        let m = 1 + (n - 1) / block_size;
         let depth = log2_up(m + 1);
         let mut table: Vec<_> = (0..depth)
-            .map(|_| vec![unsafe{MaybeUninit::uninit().assume_init()}; m])
+            .map(|_| vec![unsafe { MaybeUninit::uninit().assume_init() }; m])
             .collect();
         let min_idx = |i: T, j: T| -> T {
-            if (less)(
-                &a[j.to_usize().unwrap()],
-                &a[i.to_usize().unwrap()]
-            ) { j } else { i }
+            if (less)(&a[j.to_usize().unwrap()], &a[i.to_usize().unwrap()]) {
+                j
+            } else {
+                i
+            }
         };
         // minimums within each block
         let l = n / block_size;
-        (&mut table[0][..l+1])
+        (&mut table[0][..l + 1])
             .into_par_iter()
             .enumerate()
             .for_each(|(i, ti)| {
                 let s = i * block_size;
                 let e = n.min(s + block_size);
                 let mut k = T::from_usize(s).unwrap();
-                for j in s + 1..e { k = min_idx(T::from_usize(j).unwrap(), k); }
+                for j in s + 1..e {
+                    k = min_idx(T::from_usize(j).unwrap(), k);
+                }
                 *ti = k;
             });
 
@@ -87,17 +92,24 @@ impl<'a, T, F> RangeMin<'a, T, F> where
         for j in 1..depth {
             let (l, r) = table.split_at_mut(j);
             let tj = &mut r[0];
-            let tj_1 = & l[j-1];
-            tj[..m-dist].par_iter_mut().enumerate().for_each(|(i, t)|
-                *t = min_idx(tj_1[i], tj_1[i+dist])
-            );
-            tj[m-dist..m].par_iter_mut().enumerate().for_each(|(i, t)|
-                *t = tj_1[i]
-            );
+            let tj_1 = &l[j - 1];
+            tj[..m - dist]
+                .par_iter_mut()
+                .enumerate()
+                .for_each(|(i, t)| *t = min_idx(tj_1[i], tj_1[i + dist]));
+            tj[m - dist..m]
+                .par_iter_mut()
+                .enumerate()
+                .for_each(|(i, t)| *t = tj_1[i]);
             dist *= 2;
         }
 
-        Self { arr: a, table, less, block_size }
+        Self {
+            arr: a,
+            table,
+            less,
+            block_size,
+        }
     }
 
     pub fn query(&self, i: T, j: T) -> T {
@@ -145,11 +157,11 @@ impl<'a, T, F> RangeMin<'a, T, F> where
         } else if block_j == block_i + T::one() {
             out_of_block_min = self.table[1][block_i.to_usize().unwrap()];
         } else {
-            let k = log2_up((block_j-block_i+T::one()).to_usize().unwrap()) - 1;
+            let k = log2_up((block_j - block_i + T::one()).to_usize().unwrap()) - 1;
             let p = 1 << k;
             out_of_block_min = self.min_idx(
                 self.table[k][block_i.to_usize().unwrap()],
-                self.table[k][block_j.to_usize().unwrap() + 1 - p]
+                self.table[k][block_j.to_usize().unwrap() + 1 - p],
             );
         }
 
@@ -157,28 +169,29 @@ impl<'a, T, F> RangeMin<'a, T, F> where
     }
 }
 
-
-
 // The atomic version:
 #[allow(dead_code)]
-pub struct AtomU32RangeMin<'a, F>
-{
+pub struct AtomU32RangeMin<'a, F> {
     arr: &'a [AtomicU32],
     table: Vec<Vec<u32>>,
     less: F,
     block_size: usize,
 }
 
-impl<'a, F> AtomU32RangeMin<'a, F> where
+impl<'a, F> AtomU32RangeMin<'a, F>
+where
     F: Fn(&u32, &u32) -> bool + Clone + Copy + Send + Sync,
 {
     #[inline(always)]
-    fn min_idx(&self, i: u32, j: u32) -> u32 where
-    {
+    fn min_idx(&self, i: u32, j: u32) -> u32 where {
         if (self.less)(
             &self.arr[j as usize].load(ORDER),
-            &self.arr[i as usize].load(ORDER)
-        ) { j } else { i }
+            &self.arr[i as usize].load(ORDER),
+        ) {
+            j
+        } else {
+            i
+        }
     }
 
     pub fn new(a: &'a [AtomicU32], less: F, block_size: usize) -> Self {
@@ -187,26 +200,29 @@ impl<'a, F> AtomU32RangeMin<'a, F> where
         let depth = log2_up(m + 1);
         #[allow(invalid_value)]
         let mut table: Vec<_> = (0..depth)
-            .map(|_| vec![unsafe{MaybeUninit::uninit().assume_init()}; m])
+            .map(|_| vec![unsafe { MaybeUninit::uninit().assume_init() }; m])
             .collect();
 
         let min_idx = |i: u32, j: u32| -> u32 {
-            if (less)(
-                &a[j as usize].load(ORDER),
-                &a[i as usize].load(ORDER)
-            ) { j } else { i }
+            if (less)(&a[j as usize].load(ORDER), &a[i as usize].load(ORDER)) {
+                j
+            } else {
+                i
+            }
         };
 
         // minimums within each block
         let l = n / block_size;
-        (&mut table[0][..l+1])
+        (&mut table[0][..l + 1])
             .into_par_iter()
             .enumerate()
             .for_each(|(i, ti)| {
                 let s = i * block_size;
                 let e = n.min(s + block_size);
                 let mut k = s as u32;
-                for j in s+1..e { k = min_idx(j as u32, k); }
+                for j in s + 1..e {
+                    k = min_idx(j as u32, k);
+                }
                 *ti = k;
             });
 
@@ -215,17 +231,24 @@ impl<'a, F> AtomU32RangeMin<'a, F> where
         for j in 1..depth {
             let (l, r) = table.split_at_mut(j);
             let tj = &mut r[0];
-            let tj_1 = & l[j-1];
-            tj[..m-dist].par_iter_mut().enumerate().for_each(|(i, t)|
-                *t = min_idx(tj_1[i], tj_1[i+dist])
-            );
-            tj[m-dist..m].par_iter_mut().enumerate().for_each(|(i, t)|
-                *t = tj_1[i]
-            );
+            let tj_1 = &l[j - 1];
+            tj[..m - dist]
+                .par_iter_mut()
+                .enumerate()
+                .for_each(|(i, t)| *t = min_idx(tj_1[i], tj_1[i + dist]));
+            tj[m - dist..m]
+                .par_iter_mut()
+                .enumerate()
+                .for_each(|(i, t)| *t = tj_1[i]);
             dist *= 2;
         }
 
-        Self { arr: a, table, less, block_size }
+        Self {
+            arr: a,
+            table,
+            less,
+            block_size,
+        }
     }
 
     pub fn query(&self, i: u32, j: u32) -> u32 {
@@ -234,21 +257,23 @@ impl<'a, F> AtomU32RangeMin<'a, F> where
         // same or adjacent blocks
         if j - i < bls {
             let mut r = i;
-            for k in i+1..j+1 { r = self.min_idx(r, k); }
+            for k in i + 1..j + 1 {
+                r = self.min_idx(r, k);
+            }
             return r;
         }
-        let mut block_i = i/bls;
-        let mut block_j = j/bls;
+        let mut block_i = i / bls;
+        let mut block_j = j / bls;
         let mut minl = i;
 
         // min suffix of first block
-        for k in minl+1 .. (block_i+1) * bls {
+        for k in minl + 1..(block_i + 1) * bls {
             minl = self.min_idx(minl, k);
         }
 
         //min prefix of last block
         let mut minr = block_j * bls;
-        for k in minr+1 .. j+1 {
+        for k in minr + 1..j + 1 {
             minr = self.min_idx(minr, k);
         }
 
@@ -265,11 +290,11 @@ impl<'a, F> AtomU32RangeMin<'a, F> where
         } else if block_j == block_i + 1 {
             out_of_block_min = self.table[1][block_i.to_usize().unwrap()];
         } else {
-            let k = log2_up((block_j-block_i+1).to_usize().unwrap()) - 1;
+            let k = log2_up((block_j - block_i + 1).to_usize().unwrap()) - 1;
             let p = 1 << k;
             out_of_block_min = self.min_idx(
                 self.table[k][block_i.to_usize().unwrap()],
-                self.table[k][block_j.to_usize().unwrap() + 1 - p]
+                self.table[k][block_j.to_usize().unwrap() + 1 - p],
             );
         }
 

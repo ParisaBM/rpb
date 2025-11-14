@@ -30,10 +30,10 @@ use std::io::{prelude::*, BufReader};
 
 use rayon::prelude::*;
 
-use parlay::verbose_println;
-use crate::DefInt;
-use super::io::{read_file_to_vec, read_big_file_to_vec};
 use super::graph::*;
+use super::io::{read_big_file_to_vec, read_file_to_vec};
+use crate::DefInt;
+use parlay::verbose_println;
 
 const ADJ_GRAPH_HEADER: &str = "AdjacencyGraph";
 
@@ -50,19 +50,24 @@ pub fn read_graph_from_file(fname: &str) -> Graph {
 
     verbose_println!("making the graph (n={n}, m={m})...");
     let mut g = Graph {
-        offsets: Vec::with_capacity(n+1),
+        offsets: Vec::with_capacity(n + 1),
         edges: Vec::with_capacity(m),
         degrees: vec![],
         n,
         m,
     };
-    unsafe { g.offsets.set_len(n+1); g.edges.set_len(m); }
+    unsafe {
+        g.offsets.set_len(n + 1);
+        g.edges.set_len(m);
+    }
 
     verbose_println!("reading offsets...");
     for i in 0..n {
         let tt = lines.next().unwrap().unwrap();
         let ttt = tt.parse();
-        if ttt.is_err() { println!("{i}, {tt}") }
+        if ttt.is_err() {
+            println!("{i}, {tt}")
+        }
         g.offsets[i] = ttt.unwrap();
     }
     g.offsets[n] = m as DefInt;
@@ -88,19 +93,18 @@ pub fn read_edge_array_from_file(fname: &str) -> EdgeArray {
     verbose_println!("reading file...");
     read_big_file_to_vec(
         fname,
-        Some { 0: |w: &[&str]| {debug_assert_eq!(w[0], "EdgeArray")} },
-        &mut ea.es
+        Some {
+            0: |w: &[&str]| debug_assert_eq!(w[0], "EdgeArray"),
+        },
+        &mut ea.es,
     );
     let n = ea.es.len();
 
     verbose_println!("finding_max...");
-    let max = (&ea.es)
-        .into_par_iter()
-        .cloned()
-        .reduce(
-            || Edge::new(0, 0),
-            |a, b| Edge::new(a.u.max(b.u), a.v.max(b.v)
-        ));
+    let max = (&ea.es).into_par_iter().cloned().reduce(
+        || Edge::new(0, 0),
+        |a, b| Edge::new(a.u.max(b.u), a.v.max(b.v)),
+    );
     let rm = max.u.max(max.v) as usize + 1;
 
     ea.non_zeros = n;
@@ -114,19 +118,21 @@ pub fn read_edge_array_from_file(fname: &str) -> EdgeArray {
 pub fn read_wgh_edge_array_from_file(fname: &str) -> WghEdgeArray {
     let es: Vec<WghEdge> = read_file_to_vec(
         fname,
-        Some { 0: |w: &[&str]| {
-            debug_assert_eq!(w[0], "WeightedEdgeArray")
-        }} );
+        Some {
+            0: |w: &[&str]| debug_assert_eq!(w[0], "WeightedEdgeArray"),
+        },
+    );
 
-    let m = es
-        .par_iter()
-        .cloned()
-        .reduce(
-            || WghEdge::new(0, 0, 0.0),
-            |a, b| WghEdge::new(max(a.u, b.u), max(a.v, b.v), 0.0)
-        );
+    let m = es.par_iter().cloned().reduce(
+        || WghEdge::new(0, 0, 0.0),
+        |a, b| WghEdge::new(max(a.u, b.u), max(a.v, b.v), 0.0),
+    );
 
-    println!("extracted graph n={} m={}", max(m.u, m.v) as usize + 1, es.len());
+    println!(
+        "extracted graph n={} m={}",
+        max(m.u, m.v) as usize + 1,
+        es.len()
+    );
 
     WghEdgeArray::new(es, max(m.u, m.v) as usize + 1)
 }

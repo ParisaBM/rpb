@@ -25,13 +25,12 @@ mod macros;
 // SOFTWARE.
 // ============================================================================
 
-
 pub mod internal;
 
+pub mod hash_table;
+pub mod primitives;
 pub mod random;
 pub mod utilities;
-pub mod primitives;
-pub mod hash_table;
 
 pub use internal::Timer;
 

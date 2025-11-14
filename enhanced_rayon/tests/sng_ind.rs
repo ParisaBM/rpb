@@ -27,7 +27,6 @@ use rayon::prelude::*;
 
 use enhanced_rayon::prelude::*;
 
-
 #[test]
 fn can_collect() {
     let mut v: Vec<usize> = (0..100).collect();
@@ -72,8 +71,7 @@ fn can_mutate() {
     let mut v: Vec<usize> = (0..100).collect();
     let offs: Vec<usize> = vec![1, 85, 35, 13, 76];
 
-    v
-        .par_ind_iter_mut(&offs)
+    v.par_ind_iter_mut(&offs)
         .with_gran(1)
         .enumerate()
         .for_each(|(i, vi)| *vi *= i);
@@ -93,13 +91,11 @@ fn ignore_duplicates() {
     let mut v: Vec<usize> = (0..100).collect();
     let offs: Vec<usize> = vec![1, 85, 35, 13, 76, 23, 13, 49, 29];
 
-    v
-        .par_ind_iter_mut(&offs)
+    v.par_ind_iter_mut(&offs)
         .with_gran(1)
         .enumerate()
         .for_each(|(i, vi)| *vi *= i);
 }
-
 
 #[test]
 fn can_collect_by() {
@@ -118,7 +114,7 @@ fn can_collect_reverse_by() {
     let mut v: Vec<u32> = (0..100).collect();
 
     let r: Vec<u32> = v
-        .par_ind_iter_mut_by(|i| 98 - 2*i, 50)
+        .par_ind_iter_mut_by(|i| 98 - 2 * i, 50)
         .with_gran(1)
         .map(|vi| *vi)
         .collect();
@@ -143,8 +139,7 @@ fn can_mutate_by() {
     let mut v: Vec<usize> = (0..100).collect();
     let offs: Vec<usize> = vec![1, 85, 35, 13, 76];
 
-    v
-        .par_ind_iter_mut_by(|i| offs[i], offs.len())
+    v.par_ind_iter_mut_by(|i| offs[i], offs.len())
         .with_gran(1)
         .enumerate()
         .for_each(|(i, vi)| *vi *= i);
@@ -164,8 +159,7 @@ fn ignore_duplicates_by() {
     let mut v: Vec<usize> = (0..100).collect();
     let offs: Vec<usize> = vec![1, 85, 35, 13, 76, 23, 13, 49, 29];
 
-    v
-        .par_ind_iter_mut_by(|i| offs[i], offs.len())
+    v.par_ind_iter_mut_by(|i| offs[i], offs.len())
         .with_gran(1)
         .enumerate()
         .for_each(|(i, vi)| *vi *= i);

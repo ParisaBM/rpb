@@ -25,19 +25,19 @@ use rayon::prelude::*;
 // SOFTWARE.
 // ============================================================================
 
-
-pub fn comp_sort<T, F>(
-    inp: &mut [T],
-    less: F,
-    stable: bool
-) where
+pub fn comp_sort<T, F>(inp: &mut [T], less: F, stable: bool)
+where
     T: Copy + Send,
     F: Fn(T, T) -> bool + Copy + Sync,
 {
     let cmp = |a: &T, b: &T| {
-        if less(*a, *b) { std::cmp::Ordering::Less }
-        else if less(*b, *a) { std::cmp::Ordering::Greater }
-        else { std::cmp::Ordering::Equal }
+        if less(*a, *b) {
+            std::cmp::Ordering::Less
+        } else if less(*b, *a) {
+            std::cmp::Ordering::Greater
+        } else {
+            std::cmp::Ordering::Equal
+        }
     };
     if stable {
         inp.par_sort_by(cmp);

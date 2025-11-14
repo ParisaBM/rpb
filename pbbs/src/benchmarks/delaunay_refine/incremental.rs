@@ -27,32 +27,30 @@ use std::marker::PhantomData;
 
 use rayon::prelude::*;
 
+use crate::common::atomics::{atomic_cas, write_max_i32};
+use crate::common::geometry::*;
+use crate::common::topology::*;
+use crate::common::topology_from_triangles::topology_from_triangles;
 use parlay::hash_table::*;
+use parlay::primitives::{nc_pack, pack, pack_index};
 use parlay::utilities::hash64;
 use parlay::{make_mut, Timer};
-use parlay::primitives::{pack, nc_pack, pack_index};
-use crate::common::topology::*;
-use crate::common::geometry::*;
-use crate::common::atomics::{write_max_i32, atomic_cas};
-use crate::common::topology_from_triangles::topology_from_triangles;
-
 
 type P = Point2d<f64>;
 type Tri<'a> = Triangle<'a>;
 type Vtx<'a> = Vertex<'a>;
 type Spx<'a> = SimpleX<'a>;
 
-
 struct Qs<'a> {
     vertex_q: Vec<usize>,
-    simplex_q: Vec<Spx<'a>>
+    simplex_q: Vec<Spx<'a>>,
 }
 
 impl<'a> Qs<'a> {
     pub fn new() -> Self {
         Self {
             vertex_q: Vec::with_capacity(50),
-            simplex_q: Vec::with_capacity(50)
+            simplex_q: Vec::with_capacity(50),
         }
     }
 }
@@ -62,27 +60,37 @@ type VertexQs<'a> = Vec<Qs<'a>>;
 // *************************************************************
 //   PARALLEL HASH TABLE TO STORE WORK QUEUE OF SKINNY TRIANGLES
 // *************************************************************
-struct HashTriangles<'a> { phantom: PhantomData<&'a bool> }
+struct HashTriangles<'a> {
+    phantom: PhantomData<&'a bool>,
+}
 
 impl<'a> HashHelper for HashTriangles<'a> {
     type KT = &'a Tri<'a>;
     type ET = &'a Tri<'a>;
 
-    fn empty    () -> Self::ET { &NULL_TRI }
-    fn get_key  (v: Self::ET) -> Self::KT { v }
-    fn replace_q(_s: Self::ET, _s2: Self::ET) -> bool { false }
-    fn hash     (s: Self::KT) -> usize { hash64(s.id as u64) as usize }
+    fn empty() -> Self::ET {
+        &NULL_TRI
+    }
+    fn get_key(v: Self::ET) -> Self::KT {
+        v
+    }
+    fn replace_q(_s: Self::ET, _s2: Self::ET) -> bool {
+        false
+    }
+    fn hash(s: Self::KT) -> usize {
+        hash64(s.id as u64) as usize
+    }
 
-    fn cmp (s: Self::KT, s2:Self::KT) -> std::cmp::Ordering {
+    fn cmp(s: Self::KT, s2: Self::KT) -> std::cmp::Ordering {
         s.id.cmp(&s2.id)
     }
 
     #[inline(always)]
-    fn is_empty (s: &Self::ET) -> bool {
+    fn is_empty(s: &Self::ET) -> bool {
         (*s) as *const Tri == &NULL_TRI as *const Tri
     }
 
-    fn cas (p: &mut Self::ET, o: Self::ET, n: Self::ET) -> bool {
+    fn cas(p: &mut Self::ET, o: Self::ET, n: Self::ET) -> bool {
         atomic_cas(p, o, n)
     }
 }
@@ -129,7 +137,7 @@ fn reserve_for_insert<'a>(v: &Vtx, mut t: Spx<'a>, q: &mut Qs<'a>) {
     for i in 0..q.vertex_q.len() {
         write_max_i32(
             unsafe { &mut (*(q.vertex_q[i] as usize as *mut Vtx)).reserve },
-            v.id
+            v.id,
         );
     }
 }
@@ -144,9 +152,12 @@ fn skinny_tri(t: &Tri) -> bool {
         t.vtx[0].unwrap().pt,
         t.vtx[1].unwrap().pt,
         t.vtx[2].unwrap().pt,
-        min_angle
-    ) { true }
-    else { false }
+        min_angle,
+    ) {
+        true
+    } else {
+        false
+    }
 }
 
 #[inline(always)]
@@ -166,10 +177,10 @@ fn circumcenter(t: &Spx) -> P {
         triangle_circumcenter(
             tt.vtx[0].unwrap().pt,
             tt.vtx[1].unwrap().pt,
-            tt.vtx[2].unwrap().pt
+            tt.vtx[2].unwrap().pt,
         )
-    }
-    else { // t.isBoundary()
+    } else {
+        // t.isBoundary()
         let o = t.o as usize;
         let p0 = tt.vtx[(o + 2) % 3].unwrap().pt;
         let p1 = tt.vtx[o].unwrap().pt;
@@ -181,41 +192,52 @@ fn circumcenter(t: &Spx) -> P {
 // and setting the boundary if the circumcenter encroaches on a boundary
 #[inline(always)]
 fn check_encroached(t: &mut Spx) -> bool {
-    if t.is_boundary() { return false }
+    if t.is_boundary() {
+        return false;
+    }
     let mut i = 0;
     while i < 3 {
         if t.across().is_boundary() && t.far_angle() > 45.0 {
             break;
-        } else { *t = t.rotate(); i+=1; }
+        } else {
+            *t = t.rotate();
+            i += 1;
+        }
     }
     if i < 3 {
         t.boundary = true;
         true
-    } else { false }
+    } else {
+        false
+    }
 }
 
-fn find_and_reserve_cavity<'a>(
-    v: &mut Vtx<'a>,
-    t: &mut Spx<'a>,
-    q: &mut Qs<'a>
-) -> bool {
+fn find_and_reserve_cavity<'a>(v: &mut Vtx<'a>, t: &mut Spx<'a>, q: &mut Qs<'a>) -> bool {
     *t = Spx::<'a>::new(v.bad_t.unwrap(), 0);
-    if t.t.is_none() { panic!("refine: nothing in badT"); }
-    if t.t.unwrap().bad == 0 { return false; }
+    if t.t.is_none() {
+        panic!("refine: nothing in badT");
+    }
+    if t.t.unwrap().bad == 0 {
+        return false;
+    }
 
     // if there is an obtuse angle then move across to opposite triangle, repeat
-    if obtuse(t) { *t = t.across(); }
+    if obtuse(t) {
+        *t = t.across();
+    }
     while t.is_triangle() {
         let mut i = 0;
-        while i<2 {
+        while i < 2 {
             *t = t.rotate();
             if obtuse(t) {
                 *t = t.across();
                 break;
             }
-            i+=1;
+            i += 1;
         }
-        if i==2 { break; }
+        if i == 2 {
+            break;
+        }
     }
 
     // if encroaching on boundary, move to boundary
@@ -229,42 +251,52 @@ fn find_and_reserve_cavity<'a>(
 
 // checks if v "won" on all adjacent vertices and inserts point if so
 // returns true if "won" and cavity was updated
-fn add_cavity<'a>(
-    v: &mut Vtx,
-    t: Spx<'a>,
-    q: &mut Qs<'a>,
-    tt: &TriangleTable<'a>
-) -> bool {
+fn add_cavity<'a>(v: &mut Vtx, t: Spx<'a>, q: &mut Qs<'a>, tt: &TriangleTable<'a>) -> bool {
     let mut flag = true;
     for i in 0..q.vertex_q.len() {
         let u = unsafe { &mut *(q.vertex_q[i] as *mut Vtx) };
-        if u.reserve == v.id { u.reserve = -1; } // reset to -1
-        else { flag = false; } // someone else with higher priority reserved u
+        if u.reserve == v.id {
+            u.reserve = -1;
+        }
+        // reset to -1
+        else {
+            flag = false;
+        } // someone else with higher priority reserved u
     }
     if flag {
         let t0 = t.t.unwrap();
         let t1 = unsafe { make_mut!(v.t.unwrap(), Tri).unwrap() };
         let t2 = unsafe { &mut *(t1 as *mut Tri).add(1) };
         t1.initialized = true;
-        if t.is_boundary() { t.split_boundary(v, t1); }
-        else {
+        if t.is_boundary() {
+            t.split_boundary(v, t1);
+        } else {
             t2.initialized = true;
             t.split(v, t1, t2);
         }
 
         // update the cavity
-        for i in 0..q.simplex_q.len() { q.simplex_q[i].flip(); }
-        q.simplex_q.push( Spx::new(t0, 0) );
-        q.simplex_q.push( Spx::new(t1, 0) );
-        if !t.is_boundary() { q.simplex_q.push(Spx::new(t2, 0)); }
+        for i in 0..q.simplex_q.len() {
+            q.simplex_q[i].flip();
+        }
+        q.simplex_q.push(Spx::new(t0, 0));
+        q.simplex_q.push(Spx::new(t1, 0));
+        if !t.is_boundary() {
+            q.simplex_q.push(Spx::new(t2, 0));
+        }
 
         for i in 0..q.simplex_q.len() {
             let t = q.simplex_q[i].t.unwrap();
             if skinny_tri(t) {
                 tt.insert(t);
-                unsafe { make_mut!(t, Tri).unwrap().bad = 1; }
+                unsafe {
+                    make_mut!(t, Tri).unwrap().bad = 1;
+                }
+            } else {
+                unsafe {
+                    make_mut!(t, Tri).unwrap().bad = 0;
+                }
             }
-            else { unsafe { make_mut!(t, Tri).unwrap().bad = 0; } }
         }
         v.bad_t = None;
     }
@@ -283,19 +315,13 @@ fn add_cavity<'a>(
 fn add_refining_vertices<'a>(
     vs: &mut [&mut Vtx<'a>],
     tt: &TriangleTable<'a>,
-    vq: &mut VertexQs<'a>
+    vq: &mut VertexQs<'a>,
 ) -> usize {
     let n = vs.len();
     let size = n.min(vq.len());
 
-    let mut t: Vec<_> = (0..size)
-        .into_par_iter()
-        .map(|_| Spx::default())
-        .collect();
-    let mut flags: Vec<_> = (0..size)
-        .into_par_iter()
-        .map(|_| false)
-        .collect();
+    let mut t: Vec<_> = (0..size).into_par_iter().map(|_| Spx::default()).collect();
+    let mut flags: Vec<_> = (0..size).into_par_iter().map(|_| false).collect();
 
     let mut top = n;
     let mut num_failed = 0;
@@ -309,7 +335,7 @@ fn add_refining_vertices<'a>(
             &mut flags[..cnt],
             &mut vs[offset..top],
             &mut t[..cnt],
-            &mut vq[..cnt]
+            &mut vq[..cnt],
         )
             .into_par_iter()
             .for_each(|(fj, vj, tj, vqj)| {
@@ -320,7 +346,7 @@ fn add_refining_vertices<'a>(
             &mut flags[..cnt],
             &mut vs[offset..top],
             &mut t[..cnt],
-            &mut vq[..cnt]
+            &mut vq[..cnt],
         )
             .into_par_iter()
             .for_each(|(fj, vj, tj, vqj)| {
@@ -329,8 +355,10 @@ fn add_refining_vertices<'a>(
 
         // Pack the failed vertices back onto Q
         let mut remain = vec![];
-        unsafe { nc_pack(&vs[offset..top], &flags[..cnt], &mut remain); }
-        vs[offset .. offset + remain.len()]
+        unsafe {
+            nc_pack(&vs[offset..top], &flags[..cnt], &mut remain);
+        }
+        vs[offset..offset + remain.len()]
             .par_iter_mut()
             .enumerate()
             .for_each(|(j, vj)| unsafe {
@@ -349,16 +377,16 @@ fn add_refining_vertices<'a>(
 static QSIZE: usize = 20000;
 
 fn refine_internal(tris: &Triangles<P>, dest: &mut Triangles<P>) {
-    let mut t = Timer::new("dr"); t.start();
+    let mut t = Timer::new("dr");
+    t.start();
     let expand_factor = 4;
     let n = tris.num_points();
     let m = tris.num_triangles();
-    let extra_vertices = expand_factor*n;
+    let extra_vertices = expand_factor * n;
     let total_vertices = n + extra_vertices;
     let total_triangles = m + 2 * extra_vertices;
 
-    let (mut triangles, mut vertices) =
-        topology_from_triangles(tris, extra_vertices);
+    let (mut triangles, mut vertices) = topology_from_triangles(tris, extra_vertices);
     t.next("from Triangles");
 
     //  set up extra triangles
@@ -366,13 +394,15 @@ fn refine_internal(tris: &Triangles<P>, dest: &mut Triangles<P>) {
         .par_iter_mut()
         .enumerate()
         .for_each(|(i, ti)| {
-            ti.id = i+m;
+            ti.id = i + m;
             ti.initialized = false;
         });
 
     //  set up extra vertices
     let mut vs = Vec::<&mut Vtx>::with_capacity(extra_vertices);
-    unsafe { vs.set_len(extra_vertices); }
+    unsafe {
+        vs.set_len(extra_vertices);
+    }
     (&mut vs, &mut vertices[n..n + extra_vertices])
         .into_par_iter()
         .enumerate()
@@ -391,14 +421,13 @@ fn refine_internal(tris: &Triangles<P>, dest: &mut Triangles<P>) {
     triangles[..num_triangs].par_iter().for_each(|ti| {
         if skinny_tri(ti) {
             work_q.insert(ti);
-            unsafe { *make_mut!(&ti.bad, u8).unwrap() = 1; }
+            unsafe {
+                *make_mut!(&ti.bad, u8).unwrap() = 1;
+            }
         }
     });
 
-    let mut vq: Vec<_> = (0..QSIZE)
-        .into_par_iter()
-        .map(|_| Qs::new())
-        .collect();
+    let mut vq: Vec<_> = (0..QSIZE).into_par_iter().map(|_| Qs::new()).collect();
     t.next("Start");
 
     // Each iteration processes all bad triangles from the workQ while
@@ -413,7 +442,9 @@ fn refine_internal(tris: &Triangles<P>, dest: &mut Triangles<P>) {
         let num_bad = bad_t.len();
 
         println!("numBad = {num_bad}  out of {}", bad_tt.len());
-        if num_bad == 0 { break; }
+        if num_bad == 0 {
+            break;
+        }
         if num_points + num_bad > total_vertices {
             panic!("ran out of vertices");
         }
@@ -422,11 +453,13 @@ fn refine_internal(tris: &Triangles<P>, dest: &mut Triangles<P>) {
         // allocate 1 vertex per bad triangle and assign triangle to it
         (
             &mut bad_t[..num_bad],
-            &mut vertices[n+offset..n+offset+num_bad]
+            &mut vertices[n + offset..n + offset + num_bad],
         )
             .into_par_iter()
             .for_each(|(bti, vi)| {
-                unsafe { *make_mut!(&bti.bad, u8).unwrap() = 2; }
+                unsafe {
+                    *make_mut!(&bti.bad, u8).unwrap() = 2;
+                }
                 vi.bad_t = Some(bti);
             });
 
@@ -434,20 +467,14 @@ fn refine_internal(tris: &Triangles<P>, dest: &mut Triangles<P>) {
         work_q = TriangleTable::new(num_bad, 1.5);
 
         // This does all the work adding new vertices, and any new bad triangles to the workQ
-        add_refining_vertices(
-            &mut vs[offset..offset+num_bad],
-            &work_q,
-            &mut vq
-        );
+        add_refining_vertices(&mut vs[offset..offset + num_bad], &work_q, &mut vq);
 
         // push any bad triangles that were left untouched onto the Q
-        (0..num_bad)
-            .into_par_iter()
-            .for_each(|i| {
-                if bad_t[i].bad==2 {
-                    work_q.insert(bad_t[i]);
-                }
-            });
+        (0..num_bad).into_par_iter().for_each(|i| {
+            if bad_t[i].bad == 2 {
+                work_q.insert(bad_t[i]);
+            }
+        });
 
         num_points += num_bad;
         num_triangs += 2 * num_bad;
@@ -464,10 +491,15 @@ fn refine_internal(tris: &Triangles<P>, dest: &mut Triangles<P>) {
     let mut is: Vec<usize> = vec![];
     pack_index(&flag, &mut is);
     let n0 = is.len();
-    let rp: Vec<_> = (0..n0).into_par_iter().map(|i| {
-        unsafe { *make_mut!(&vertices[is[i]].id, i32).unwrap() = i as i32; }
-        vertices[is[i]].pt
-    }).collect();
+    let rp: Vec<_> = (0..n0)
+        .into_par_iter()
+        .map(|i| {
+            unsafe {
+                *make_mut!(&vertices[is[i]].id, i32).unwrap() = i as i32;
+            }
+            vertices[is[i]].pt
+        })
+        .collect();
     println!("total points = {}", n0);
 
     // Extract Triangles for result
@@ -478,10 +510,17 @@ fn refine_internal(tris: &Triangles<P>, dest: &mut Triangles<P>) {
         .collect();
     pack_index(&flags, &mut is);
 
-    let rt: Vec<_> = (0..is.len()).into_par_iter().map(|i| {
-        let t = triangles[is[i]];
-        [t.vtx[0].unwrap().id, t.vtx[1].unwrap().id, t.vtx[2].unwrap().id]
-    }).collect();
+    let rt: Vec<_> = (0..is.len())
+        .into_par_iter()
+        .map(|i| {
+            let t = triangles[is[i]];
+            [
+                t.vtx[0].unwrap().id,
+                t.vtx[1].unwrap().id,
+                t.vtx[2].unwrap().id,
+            ]
+        })
+        .collect();
 
     println!("total triangles = {}", is.len());
     t.next("finish");

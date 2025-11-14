@@ -25,17 +25,12 @@ const BIN_SEARCH_BASE: usize = 16;
 // SOFTWARE.
 // ============================================================================
 
-
-
 fn linear_search<T, F>(inp: &[T], p: T, less: F) -> usize
 where
     T: Copy,
     F: Fn(T, T) -> bool,
 {
-    inp
-        .iter()
-        .position(|&x| !less(x, p))
-        .unwrap_or(inp.len())
+    inp.iter().position(|&x| !less(x, p)).unwrap_or(inp.len())
 }
 
 pub fn binary_search<T, F>(inp: &[T], p: T, less: F) -> usize
@@ -47,8 +42,11 @@ where
 
     while end - start > BIN_SEARCH_BASE {
         let mid = (start + end) / 2;
-        if !less(inp[mid], p) { end = mid; }
-        else { start = mid + 1; }
+        if !less(inp[mid], p) {
+            end = mid;
+        } else {
+            start = mid + 1;
+        }
     }
 
     start + linear_search(&inp[start..end], p, less)

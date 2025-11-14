@@ -1,4 +1,4 @@
-use std::cmp::{Ordering, min};
+use std::cmp::{min, Ordering};
 // ============================================================================
 // This code is part of RPB.
 // ----------------------------------------------------------------------------
@@ -25,30 +25,47 @@ use std::cmp::{Ordering, min};
 // SOFTWARE.
 // ============================================================================
 
-
-use crate::{DefInt, DefIntS, DefFloat};
 use crate::graph::{WghEdge, WghEdgeArray};
 use crate::union_find::UnionFind;
+use crate::{DefFloat, DefInt, DefIntS};
 
 #[derive(Clone, Copy)]
-pub struct IndexedEdge { pub u: DefInt, pub v: DefInt, pub id: DefInt, pub w: DefFloat }
+pub struct IndexedEdge {
+    pub u: DefInt,
+    pub v: DefInt,
+    pub id: DefInt,
+    pub w: DefFloat,
+}
 
 impl IndexedEdge {
     pub fn new(e: WghEdge, id: DefInt) -> Self {
-        Self { u: e.u, v: e.v, id, w: e.w }
+        Self {
+            u: e.u,
+            v: e.v,
+            id,
+            w: e.w,
+        }
     }
 }
 
 impl Default for IndexedEdge {
     fn default() -> Self {
-        Self { u: 0, v: 0, id: 0, w: 0.0 }
+        Self {
+            u: 0,
+            v: 0,
+            id: 0,
+            w: 0.0,
+        }
     }
 }
 
 #[inline(always)]
 fn cmp_idx_edge(a: &IndexedEdge, b: &IndexedEdge) -> Ordering {
-    if a.w < b.w || (a.w == b.w && a.id < b.id) { Ordering::Less }
-    else { Ordering::Greater }
+    if a.w < b.w || (a.w == b.w && a.id < b.id) {
+        Ordering::Less
+    } else {
+        Ordering::Greater
+    }
 }
 
 fn union_find_loop(es: &[IndexedEdge], m: usize, uf: &mut UnionFind, msf: &mut Vec<DefInt>) {
@@ -71,12 +88,10 @@ pub fn minimum_spanning_forest(wea: &WghEdgeArray, dest: &mut Vec<DefInt>) {
     let m = wea.m;
     let n = wea.n;
 
-    let mut wea: Vec<IndexedEdge> = (0..m)
-        .map(|i| IndexedEdge::new(wea[i], i as u32))
-        .collect();
+    let mut wea: Vec<IndexedEdge> = (0..m).map(|i| IndexedEdge::new(wea[i], i as u32)).collect();
 
-    let l = min(4*n/3, m);
-    wea.select_nth_unstable_by(if l==m {l-1} else {l}, cmp_idx_edge);
+    let l = min(4 * n / 3, m);
+    wea.select_nth_unstable_by(if l == m { l - 1 } else { l }, cmp_idx_edge);
     wea[..l].sort_by(cmp_idx_edge);
 
     let mut uf = UnionFind::new(n);
@@ -87,10 +102,12 @@ pub fn minimum_spanning_forest(wea: &WghEdgeArray, dest: &mut Vec<DefInt>) {
     for i in l..m {
         let u = uf.find(wea[i].u as DefIntS);
         let v = uf.find(wea[i].v as DefIntS);
-        if u != v { wea[l + k] = wea[i]; }
+        if u != v {
+            wea[l + k] = wea[i];
+        }
         k += 1;
     }
 
-    wea[l..l+k].sort_by(cmp_idx_edge);
+    wea[l..l + k].sort_by(cmp_idx_edge);
     union_find_loop(&wea[l..], k, &mut uf, dest);
 }

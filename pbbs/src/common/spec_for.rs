@@ -25,15 +25,13 @@ use std::ops::Range;
 // SOFTWARE.
 // ============================================================================
 
-use std::cmp::{min, max};
-use std::sync::atomic::AtomicU32;
-use rayon::prelude::*;
+use crate::ORDER;
 use enhanced_rayon::prelude::*;
 use parlay::maybe_uninit_vec;
 use parlay::utilities::write_min;
-use crate::ORDER;
-
-
+use rayon::prelude::*;
+use std::cmp::{max, min};
+use std::sync::atomic::AtomicU32;
 
 pub struct Reservation(AtomicU32);
 
@@ -70,7 +68,8 @@ impl Reservation {
 
     pub fn check_reset(&self, i: u32) -> bool {
         if self.0.load(ORDER) == i {
-            self.0.store(Self::MAX_IDX, ORDER); true
+            self.0.store(Self::MAX_IDX, ORDER);
+            true
         } else {
             false
         }
@@ -84,8 +83,9 @@ pub trait SpecFor<T, F> {
         commit: F,
         granularity: usize,
         rcs: Option<usize>,
-        ccs: Option<usize>
-    ) -> Result<usize, String> where
+        ccs: Option<usize>,
+    ) -> Result<usize, String>
+    where
         T: Fn(usize) -> bool + Send + Sync,
         F: Fn(usize) -> bool + Send + Sync;
 }
@@ -97,8 +97,9 @@ impl<T, F> SpecFor<T, F> for Range<usize> {
         commit: F,
         granularity: usize,
         rcs: Option<usize>,
-        ccs: Option<usize>
-    ) -> Result<usize, String> where
+        ccs: Option<usize>,
+    ) -> Result<usize, String>
+    where
         T: Fn(usize) -> bool + Send + Sync,
         F: Fn(usize) -> bool + Send + Sync,
     {
@@ -107,12 +108,8 @@ impl<T, F> SpecFor<T, F> for Range<usize> {
         let _max_tries = 100 + 200 * granularity;
         let max_round_size = (e - s) / granularity + 1;
         let mut current_round_size = max_round_size / 4;
-        let (
-            mut _round,
-            mut number_keep,
-            mut total_processed,
-            mut number_done
-        ) = (0usize, 0usize, 0usize, s);
+        let (mut _round, mut number_keep, mut total_processed, mut number_done) =
+            (0usize, 0usize, 0usize, s);
         let r_chunk_size = rcs.unwrap_or(granularity);
         let c_chunk_size = ccs.unwrap_or(granularity);
 
@@ -135,8 +132,11 @@ impl<T, F> SpecFor<T, F> for Range<usize> {
                 .with_gran(r_chunk_size)
                 .enumerate()
                 .for_each(|(i, (ii, ki))| {
-                    *ii = if i < number_keep { i_hold[i] }
-                        else { number_done + i };
+                    *ii = if i < number_keep {
+                        i_hold[i]
+                    } else {
+                        number_done + i
+                    };
                     *ki = reserve(*ii);
                 });
 
@@ -146,15 +146,13 @@ impl<T, F> SpecFor<T, F> for Range<usize> {
                 .with_gran(c_chunk_size)
                 .enumerate()
                 .for_each(|(i, ki)| {
-                    if *ki { *ki = !commit(idxs[i]); }
+                    if *ki {
+                        *ki = !commit(idxs[i]);
+                    }
                 });
 
             // keep iterations that failed for next round
-            parlay::primitives::pack(
-                &idxs[..size],
-                &keep[..size],
-                &mut i_hold
-            );
+            parlay::primitives::pack(&idxs[..size], &keep[..size], &mut i_hold);
             number_keep = i_hold.len();
             number_done = number_done + size - number_keep;
 
@@ -162,13 +160,10 @@ impl<T, F> SpecFor<T, F> for Range<usize> {
             if (number_keep as f32 / size as f32) > 0.2 {
                 current_round_size = max(
                     current_round_size / 2,
-                    max(max_round_size/64 + 1, number_keep)
+                    max(max_round_size / 64 + 1, number_keep),
                 );
             } else if (number_keep as f32 / size as f32) < 0.1 {
-                current_round_size = min(
-                    current_round_size * 2,
-                    max_round_size
-                );
+                current_round_size = min(current_round_size * 2, max_round_size);
             }
         }
         Ok(total_processed)
@@ -183,7 +178,7 @@ pub trait StatefulSpecFor<T, F, S> {
         state: S,
         granularity: usize,
         rcs: Option<usize>,
-        ccs: Option<usize>
+        ccs: Option<usize>,
     ) -> Result<usize, String>
     where
         T: Fn(usize, &mut S) -> bool + Send + Sync,
@@ -199,24 +194,20 @@ impl<T, F, S> StatefulSpecFor<T, F, S> for Range<usize> {
         _st: S,
         granularity: usize,
         rcs: Option<usize>,
-        ccs: Option<usize>
+        ccs: Option<usize>,
     ) -> Result<usize, String>
     where
-        T: Fn(usize, &mut S)->bool + Send + Sync,
-        F: Fn(usize, &mut S)->bool + Send + Sync,
+        T: Fn(usize, &mut S) -> bool + Send + Sync,
+        F: Fn(usize, &mut S) -> bool + Send + Sync,
         S: Clone + Send + Sync,
     {
         // initialization:
         let (s, e) = (self.start, self.end);
         let max_tries = 100 + 200 * granularity;
-        let max_round_size = (e-s) / granularity + 1;
+        let max_round_size = (e - s) / granularity + 1;
         let mut current_round_size = max_round_size / 4;
-        let (
-            mut round,
-            mut number_keep,
-            mut total_processed,
-            mut number_done
-        ) = (0usize, 0usize, 0usize, s);
+        let (mut round, mut number_keep, mut total_processed, mut number_done) =
+            (0usize, 0usize, 0usize, s);
         let r_chunk_size = rcs.unwrap_or(granularity);
         let c_chunk_size = ccs.unwrap_or(granularity);
 
@@ -229,46 +220,40 @@ impl<T, F, S> StatefulSpecFor<T, F, S> for Range<usize> {
         while number_done < e {
             if round > max_tries {
                 return Err("too many iterations.".to_string());
-            } else { round += 1; }
+            } else {
+                round += 1;
+            }
             let size = min(current_round_size, e - number_done);
             total_processed += size;
 
             // reserve
-            (
-                &mut idxs[..size],
-                &mut keep[..size],
-                &mut state[..size]
-            )
+            (&mut idxs[..size], &mut keep[..size], &mut state[..size])
                 .into_par_iter()
                 .with_gran(r_chunk_size)
                 .enumerate()
-                .for_each(
-                    |(i, (ii, ki, si))| {
-                        *ii = if i < number_keep { i_hold[i] }
-                            else { number_done + i };
-                        *ki = reserve(*ii, si);
-                    });
+                .for_each(|(i, (ii, ki, si))| {
+                    *ii = if i < number_keep {
+                        i_hold[i]
+                    } else {
+                        number_done + i
+                    };
+                    *ki = reserve(*ii, si);
+                });
 
             // commit
-            (
-                &mut keep[..size],
-                &mut state[..size]
-            )
+            (&mut keep[..size], &mut state[..size])
                 .into_par_iter()
                 .with_min_len(c_chunk_size)
                 .with_max_len(c_chunk_size)
                 .enumerate()
-                .for_each(
-                    |(i, (ki, si))| {
-                        if *ki { *ki = !commit(idxs[i], si); }
-                    });
+                .for_each(|(i, (ki, si))| {
+                    if *ki {
+                        *ki = !commit(idxs[i], si);
+                    }
+                });
 
             // keep iterations that failed for next round
-            parlay::primitives::pack(
-                &idxs[..size],
-                &keep[..size],
-                &mut i_hold
-            );
+            parlay::primitives::pack(&idxs[..size], &keep[..size], &mut i_hold);
             number_keep = i_hold.len();
             number_done = number_done + size - number_keep;
 
@@ -276,13 +261,10 @@ impl<T, F, S> StatefulSpecFor<T, F, S> for Range<usize> {
             if (number_keep as f32 / size as f32) > 0.2 {
                 current_round_size = max(
                     current_round_size / 2,
-                    max(max_round_size/64 + 1, number_keep)
+                    max(max_round_size / 64 + 1, number_keep),
                 );
             } else if (number_keep as f32 / size as f32) < 0.1 {
-                current_round_size = min(
-                    current_round_size * 2,
-                    max_round_size
-                );
+                current_round_size = min(current_round_size * 2, max_round_size);
             }
         }
 

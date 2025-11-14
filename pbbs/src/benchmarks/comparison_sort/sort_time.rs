@@ -25,47 +25,39 @@
 // SOFTWARE.
 // ============================================================================
 
+#[path = "mod.rs"]
+mod comparison_sort;
+#[path = "../../common/io.rs"]
+mod io;
+#[path = "../macros.rs"]
+mod macros;
 
-#[path ="../macros.rs"] mod macros;
-#[path ="../../common/io.rs"] mod io;
-#[path ="mod.rs"] mod comparison_sort;
-
-use std::time::Duration;
 use io::{read_file_to_vec, write_slice_to_file_seq};
+use std::time::Duration;
 
-
-define_args!(
-    Algs::MERGE,
-    (stable, bool, false)
-);
+define_args!(Algs::MERGE, (stable, bool, false));
 
 define_algs!(
-    (STD,       "std"),
-    (RAYON,     "rayon"),
-    (MERGE,     "merge"),
-    (QUICK,     "quick"),
-    (BUCKET,    "bucket"),
-    (SAMPLE,    "sample")
+    (STD, "std"),
+    (RAYON, "rayon"),
+    (MERGE, "merge"),
+    (QUICK, "quick"),
+    (BUCKET, "bucket"),
+    (SAMPLE, "sample")
 );
 
-
-pub fn run<T, F>(
-    alg: Algs,
-    rounds: usize,
-    stable: bool,
-    less: F,
-    inp: &[T]
-) -> (Vec<T>, Duration) where
+pub fn run<T, F>(alg: Algs, rounds: usize, stable: bool, less: F, inp: &[T]) -> (Vec<T>, Duration)
+where
     T: Copy + Send + Sync + Default,
     F: Fn(T, T) -> bool + Copy + Send + Sync,
 {
     let f = match alg {
-        Algs::MERGE     => comparison_sort::merge_sort::comp_sort,
-        Algs::QUICK     => comparison_sort::quick_sort::comp_sort,
-        Algs::BUCKET    => comparison_sort::bucket_sort::comp_sort,
-        Algs::SAMPLE    => comparison_sort::sample_sort::comp_sort,
-        Algs::STD       => comparison_sort::std::comp_sort,
-        Algs::RAYON     => comparison_sort::rayon::comp_sort,
+        Algs::MERGE => comparison_sort::merge_sort::comp_sort,
+        Algs::QUICK => comparison_sort::quick_sort::comp_sort,
+        Algs::BUCKET => comparison_sort::bucket_sort::comp_sort,
+        Algs::SAMPLE => comparison_sort::sample_sort::comp_sort,
+        Algs::STD => comparison_sort::std::comp_sort,
+        Algs::RAYON => comparison_sort::rayon::comp_sort,
     };
 
     let mut r = parlay::maybe_uninit_vec![T::default(); inp.len()];
@@ -75,9 +67,11 @@ pub fn run<T, F>(
         "sort",
         rounds,
         Duration::new(1, 0),
-        || { r_clone.copy_from_slice(inp); },
-        || { f(&mut r, less, stable) },
-        || {}
+        || {
+            r_clone.copy_from_slice(inp);
+        },
+        || f(&mut r, less, stable),
+        || {},
     );
 
     (r, mean)
@@ -90,23 +84,14 @@ fn main() {
 
     let arr: Vec<i32> = read_file_to_vec(
         &args.ifname,
-        Some { 0: |w: &[&str]| {debug_assert_eq!(w[0], "sequenceInt")} }
+        Some {
+            0: |w: &[&str]| debug_assert_eq!(w[0], "sequenceInt"),
+        },
     );
 
     let less = |a: i32, b: i32| a < b;
 
-    let (r, d) = run(
-        args.algorithm,
-        args.rounds,
-        args.stable,
-        less,
-        &arr
-    );
+    let (r, d) = run(args.algorithm, args.rounds, args.stable, less, &arr);
 
-    finalize!(
-        args,
-        r,
-        d,
-        write_slice_to_file_seq(&r, args.ofname)
-    );
+    finalize!(args, r, d, write_slice_to_file_seq(&r, args.ofname));
 }

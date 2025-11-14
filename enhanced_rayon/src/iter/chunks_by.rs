@@ -25,9 +25,8 @@ use std::ops::Range;
 // SOFTWARE.
 // ============================================================================
 
-use rayon::iter::*;
 use rayon::iter::plumbing::*;
-
+use rayon::iter::*;
 
 /// `Chunks` is an iterator that groups elements of an underlying iterator.
 ///
@@ -49,7 +48,11 @@ where
     O: Fn(usize) -> usize + Send + Clone,
 {
     pub(super) fn new(i: I, offset: O, len: usize) -> Self {
-        Self { i, offset, range: 0..len }
+        Self {
+            i,
+            offset,
+            range: 0..len,
+        }
     }
 }
 
@@ -118,13 +121,8 @@ where
             where
                 P: Producer<Item = T>,
             {
-                let producer = ChunkProducer::new(
-                    self.offset,
-                    self.range,
-                    self.len,
-                    base,
-                    Vec::from_iter
-                );
+                let producer =
+                    ChunkProducer::new(self.offset, self.range, self.len, base, Vec::from_iter);
                 self.callback.callback(producer)
             }
         }
@@ -155,16 +153,20 @@ impl<P, F, O, T> Producer for ChunkProducer<P, F, O>
 where
     O: Fn(usize) -> usize + Send + Clone,
     P: Producer,
-    F: Fn(P::IntoIter) -> T + Send + Clone
+    F: Fn(P::IntoIter) -> T + Send + Clone,
 {
     type Item = T;
     type IntoIter = std::iter::Map<ChunkSByeq<P, O>, F>;
 
     fn into_iter(self) -> Self::IntoIter {
-        let chunks = ChunkSByeq{
+        let chunks = ChunkSByeq {
             offset: self.offset,
             len: self.len,
-            inner: if self.range.len() > 0 { Some(self.base) } else { None },
+            inner: if self.range.len() > 0 {
+                Some(self.base)
+            } else {
+                None
+            },
             range: self.range,
         };
         chunks.map(self.map)
@@ -193,7 +195,6 @@ where
     }
 }
 
-
 pub(super) struct ChunkSByeq<P, O> {
     offset: O,
     range: Range<usize>,
@@ -201,10 +202,10 @@ pub(super) struct ChunkSByeq<P, O> {
     inner: Option<P>,
 }
 
-impl <P, O> Iterator for ChunkSByeq<P, O>
+impl<P, O> Iterator for ChunkSByeq<P, O>
 where
     P: Producer,
-    O: Fn(usize) -> usize
+    O: Fn(usize) -> usize,
 {
     type Item = P::IntoIter;
 
@@ -212,8 +213,8 @@ where
         let producer = self.inner.take()?;
         if self.range.len() != 1 {
             let bias = self.range.start;
-            let size = (self.offset)(bias+1) - (self.offset)(bias);
-            self.range = bias+1..self.range.end;
+            let size = (self.offset)(bias + 1) - (self.offset)(bias);
+            self.range = bias + 1..self.range.end;
             let (left, right) = producer.split_at(size);
             self.inner = Some(right);
             self.len -= size;
@@ -231,20 +232,20 @@ where
     }
 }
 
-impl <P, O> ExactSizeIterator for ChunkSByeq<P, O>
+impl<P, O> ExactSizeIterator for ChunkSByeq<P, O>
 where
     P: Producer,
-    O: Fn(usize) -> usize
+    O: Fn(usize) -> usize,
 {
     fn len(&self) -> usize {
         self.range.len()
     }
 }
 
-impl <P, O> DoubleEndedIterator for ChunkSByeq<P, O>
+impl<P, O> DoubleEndedIterator for ChunkSByeq<P, O>
 where
     P: Producer,
-    O: Fn(usize) -> usize
+    O: Fn(usize) -> usize,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         let producer = self.inner.take()?;
@@ -255,8 +256,8 @@ where
             }
             n => {
                 let bias = self.range.start;
-                let skip = (self.offset)(n-1+bias) - (self.offset)(bias);
-                self.range = bias..n-1+bias;
+                let skip = (self.offset)(n - 1 + bias) - (self.offset)(bias);
+                self.range = bias..n - 1 + bias;
                 let (left, right) = producer.split_at(skip);
                 self.inner = Some(left);
                 self.len -= skip;

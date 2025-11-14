@@ -25,13 +25,12 @@ use rayon::prelude::*;
 // SOFTWARE.
 // ============================================================================
 
-
 use crate::DefChar;
 
-#[cfg(not(any(feature = "AW_safe", feature = "sng_ind_atomic")))]
-use crate::{DefInt, lcp::lcp, suffix_array::suffix_array};
 #[cfg(any(feature = "AW_safe", feature = "sng_ind_atomic"))]
-use crate::{ORDER, DefAtomInt, lcp::atomic_lcp, suffix_array::atomic_suffix_array};
+use crate::{lcp::atomic_lcp, suffix_array::atomic_suffix_array, DefAtomInt, ORDER};
+#[cfg(not(any(feature = "AW_safe", feature = "sng_ind_atomic")))]
+use crate::{lcp::lcp, suffix_array::suffix_array, DefInt};
 
 type Result = (usize, usize, usize);
 
@@ -47,13 +46,14 @@ pub fn lrs(s: &[DefChar]) -> Result {
     let lcps = lcp(s, &sa);
     t.next("lcps");
 
-    let idx = (&lcps).into_par_iter().enumerate().reduce(
-        || (0, &0),
-        |a, b| if a.1 < b.1 { b } else { a }
-    ).0;
+    let idx = (&lcps)
+        .into_par_iter()
+        .enumerate()
+        .reduce(|| (0, &0), |a, b| if a.1 < b.1 { b } else { a })
+        .0;
     t.next("max element");
 
-    (lcps[idx] as usize, sa[idx] as usize, sa[idx+1] as usize)
+    (lcps[idx] as usize, sa[idx] as usize, sa[idx + 1] as usize)
 }
 
 #[cfg(any(feature = "AW_safe", feature = "sng_ind_atomic"))]
@@ -71,15 +71,25 @@ pub fn lrs(s: &[DefChar]) -> Result {
     t.next("lcps");
 
     let dummy = DefAtomInt::default();
-    let idx = (&lcps).into_par_iter().enumerate().reduce(
-        || (0, &dummy),
-        |a, b| if a.1.load(ORDER) < b.1.load(ORDER) { b } else { a }
-    ).0;
+    let idx = (&lcps)
+        .into_par_iter()
+        .enumerate()
+        .reduce(
+            || (0, &dummy),
+            |a, b| {
+                if a.1.load(ORDER) < b.1.load(ORDER) {
+                    b
+                } else {
+                    a
+                }
+            },
+        )
+        .0;
     t.next("max element");
 
     (
         lcps[idx].load(ORDER) as usize,
         sa[idx].load(crate::ORDER) as usize,
-        sa[idx+1].load(crate::ORDER) as usize
+        sa[idx + 1].load(crate::ORDER) as usize,
     )
 }

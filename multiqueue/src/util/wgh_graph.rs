@@ -25,9 +25,7 @@ use std::path::Path;
 // SOFTWARE.
 // ============================================================================
 
-
 use rayon::prelude::*;
-
 
 #[derive(Default, Clone, Copy)]
 pub struct Edge {
@@ -43,8 +41,12 @@ pub struct Graph {
 }
 
 impl Graph {
-    pub fn num_nodes(&self) -> usize { self.n }
-    pub fn num_edges(&self) -> usize { self.m }
+    pub fn num_nodes(&self) -> usize {
+        self.n
+    }
+    pub fn num_edges(&self) -> usize {
+        self.m
+    }
 
     pub fn new(num_nodes: usize, num_edges: usize) -> Self {
         Self {
@@ -70,26 +72,38 @@ impl Graph {
             .map(|l| l.parse().unwrap_or(l.parse::<f64>().unwrap() as usize))
             .collect::<Vec<_>>();
 
-        assert!(raw_nums.len() == num_nodes + num_edges
-            || raw_nums.len() == num_nodes + 2 * num_edges);
+        assert!(
+            raw_nums.len() == num_nodes + num_edges || raw_nums.len() == num_nodes + 2 * num_edges
+        );
 
         let mut nodes = raw_nums[..num_nodes].to_vec();
         nodes.push(num_edges);
 
         let edges = if raw_nums.len() == num_nodes + 2 * num_edges {
-            raw_nums[num_nodes..num_nodes+num_edges]
+            raw_nums[num_nodes..num_nodes + num_edges]
                 .par_iter()
-                .zip(raw_nums[num_nodes+num_edges..].par_iter())
-                .map(|(t, w)| Edge { target: *t, weight: *w } )
+                .zip(raw_nums[num_nodes + num_edges..].par_iter())
+                .map(|(t, w)| Edge {
+                    target: *t,
+                    weight: *w,
+                })
                 .collect()
         } else {
             eprintln!("Warning: graph is unweighted, using 1 for all edges");
-            raw_nums[num_nodes..num_nodes+num_edges]
+            raw_nums[num_nodes..num_nodes + num_edges]
                 .par_iter()
-                .map(|t| Edge { target: *t, weight: 1 })
+                .map(|t| Edge {
+                    target: *t,
+                    weight: 1,
+                })
                 .collect()
         };
 
-        Self { nodes, edges, n: num_nodes, m: num_edges }
+        Self {
+            nodes,
+            edges,
+            n: num_nodes,
+            m: num_edges,
+        }
     }
 }

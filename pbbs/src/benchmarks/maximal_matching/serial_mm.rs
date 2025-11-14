@@ -27,7 +27,6 @@ use crate::DefInt;
 
 use crate::graph::EdgeArray;
 
-
 pub fn maximal_matching(ea: &EdgeArray) -> Vec<DefInt> {
     let n = ea.num_rows.max(ea.num_cols);
     let m = ea.non_zeros;
@@ -38,8 +37,9 @@ pub fn maximal_matching(ea: &EdgeArray) -> Vec<DefInt> {
     for i in 0..m {
         let e = &ea[i];
         let (u, v) = (e.u as usize, e.v as usize);
-        if matched[u] || matched[v] { continue; }
-        else {
+        if matched[u] || matched[v] {
+            continue;
+        } else {
             (matched[u], matched[v]) = (true, true);
             matching[offset] = i as DefInt;
             offset += 1;

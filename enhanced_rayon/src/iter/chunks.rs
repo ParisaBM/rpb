@@ -25,9 +25,8 @@ use rayon::iter::plumbing::*;
 // SOFTWARE.
 // ============================================================================
 
-use rayon::iter::*;
 use num_traits::PrimInt;
-
+use rayon::iter::*;
 
 /// `Chunks` is an iterator that groups elements of an underlying iterator.
 ///
@@ -116,12 +115,7 @@ where
                 O: PrimInt + Sync,
                 P: Producer<Item = T>,
             {
-                let producer = ChunkProducer::new(
-                    self.offsets,
-                    self.len,
-                    base,
-                    Vec::from_iter
-                );
+                let producer = ChunkProducer::new(self.offsets, self.len, base, Vec::from_iter);
                 self.callback.callback(producer)
             }
         }
@@ -150,16 +144,20 @@ impl<'offs, P, F, O, T> Producer for ChunkProducer<'offs, P, F, O>
 where
     O: PrimInt + Sync,
     P: Producer,
-    F: Fn(P::IntoIter) -> T + Send + Clone
+    F: Fn(P::IntoIter) -> T + Send + Clone,
 {
     type Item = T;
     type IntoIter = std::iter::Map<ChunkSeq<'offs, P, O>, F>;
 
     fn into_iter(self) -> Self::IntoIter {
-        let chunks = ChunkSeq{
+        let chunks = ChunkSeq {
             offsets: self.offsets,
             len: self.len,
-            inner: if self.offsets.len() > 0 { Some(self.base) } else { None },
+            inner: if self.offsets.len() > 0 {
+                Some(self.base)
+            } else {
+                None
+            },
         };
         chunks.map(self.map)
     }
@@ -184,17 +182,16 @@ where
     }
 }
 
-
 pub(super) struct ChunkSeq<'offs, P, O: PrimInt> {
     offsets: &'offs [O],
     len: usize,
     inner: Option<P>,
 }
 
-impl <'offs, P, O> Iterator for ChunkSeq<'offs, P, O>
+impl<'offs, P, O> Iterator for ChunkSeq<'offs, P, O>
 where
     P: Producer,
-    O: PrimInt
+    O: PrimInt,
 {
     type Item = P::IntoIter;
 
@@ -220,23 +217,23 @@ where
     }
 }
 
-impl <'offs, P, O> ExactSizeIterator for ChunkSeq<'offs, P, O>
+impl<'offs, P, O> ExactSizeIterator for ChunkSeq<'offs, P, O>
 where
     P: Producer,
-    O: PrimInt
+    O: PrimInt,
 {
     fn len(&self) -> usize {
         self.offsets.len()
     }
 }
 
-impl <'offs, P, O> DoubleEndedIterator for ChunkSeq<'offs, P, O>
+impl<'offs, P, O> DoubleEndedIterator for ChunkSeq<'offs, P, O>
 where
     P: Producer,
-    O: PrimInt
+    O: PrimInt,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
-                let producer = self.inner.take()?;
+        let producer = self.inner.take()?;
         match self.offsets.len() {
             1 => {
                 self.len = 0;

@@ -25,47 +25,49 @@ use std::fs;
 // SOFTWARE.
 // ============================================================================
 
-use std::fmt::Debug;
-use std::str::FromStr;
 use num_traits::Float;
 use rayon::prelude::*;
 use rayon::str::ParallelString;
+use std::fmt::Debug;
+use std::str::FromStr;
 
-use crate::common::io::read_file_to_vec;
 use crate::common::geometry::*;
-
+use crate::common::io::read_file_to_vec;
 
 const HEADER_TRI: &str = "pbbs_triangles";
 
 pub fn read_points2d_from_file<T>(fname: &str) -> Vec<Point2d<T>>
 where
     T: Float + FromStr + Send,
-    <T as std::str::FromStr>::Err: Debug
+    <T as std::str::FromStr>::Err: Debug,
 {
     read_file_to_vec(
         fname,
-        Some {0: |w: &[&str]| debug_assert_eq!(w[0], "pbbs_sequencePoint2d")}
+        Some {
+            0: |w: &[&str]| debug_assert_eq!(w[0], "pbbs_sequencePoint2d"),
+        },
     )
 }
 
 pub fn read_points3d_from_file<T>(fname: &str) -> Vec<Point3d<T>>
 where
     T: Float + FromStr + Send,
-    <T as std::str::FromStr>::Err: Debug
+    <T as std::str::FromStr>::Err: Debug,
 {
     read_file_to_vec(
         fname,
-        Some {0: |w: &[&str]| debug_assert_eq!(w[0], "pbbs_sequencePoint3d")}
+        Some {
+            0: |w: &[&str]| debug_assert_eq!(w[0], "pbbs_sequencePoint3d"),
+        },
     )
 }
 
 pub fn read_triangles_from_file<P>(fname: &str, offset: usize) -> Triangles<P>
 where
     P: FromStr + Send,
-    <P as std::str::FromStr>::Err: Debug + Send
+    <P as std::str::FromStr>::Err: Debug + Send,
 {
-    let w = fs::read_to_string(fname)
-        .expect("cannot read input triangles's file");
+    let w = fs::read_to_string(fname).expect("cannot read input triangles's file");
     let mut w: Vec<&str> = w.trim().par_split('\n').collect();
 
     // Parse header: string
@@ -89,14 +91,15 @@ where
     let tris: Vec<Tri> = w[n..]
         .into_par_iter()
         .cloned()
-        .map( |s: &str| {
+        .map(|s: &str| {
             let s: Vec<&str> = s.trim().split_whitespace().collect();
             [
                 s[0].parse::<i32>().unwrap() - offset,
                 s[1].parse::<i32>().unwrap() - offset,
-                s[2].parse::<i32>().unwrap() - offset
+                s[2].parse::<i32>().unwrap() - offset,
             ]
-        }).collect();
+        })
+        .collect();
     debug_assert_eq!(pnts.len(), n);
     debug_assert_eq!(tris.len(), m);
 
@@ -109,20 +112,22 @@ where
     F: AsRef<std::path::Path>,
 {
     let (n, m) = (tris.num_points(), tris.num_triangles());
-    let ps: Vec<_> = tris.p
+    let ps: Vec<_> = tris.p.par_iter().map(|p| p.to_string()).collect();
+    let ts: Vec<_> = tris
+        .t
         .par_iter()
-        .map(|p| p.to_string())
-        .collect();
-    let ts: Vec<_> = tris.t
-        .par_iter()
-        .map(|t| format!("{} {} {}", t[0], t[1], t[2]) )
+        .map(|t| format!("{} {} {}", t[0], t[1], t[2]))
         .collect();
     fs::write(
         fname,
         format!(
             "{}\n{}\n{}\n{}\n{}",
-            HEADER_TRI, n, m, ps.join("\n"),
+            HEADER_TRI,
+            n,
+            m,
+            ps.join("\n"),
             ts.join("\n")
-        )
-    ).expect("cannot write to output");
+        ),
+    )
+    .expect("cannot write to output");
 }

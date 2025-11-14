@@ -25,8 +25,8 @@ pub(crate) mod std;
 // SOFTWARE.
 // ============================================================================
 
-pub(crate) mod rayon;
+pub(crate) mod bucket_sort;
 pub(crate) mod merge_sort;
 pub(crate) mod quick_sort;
+pub(crate) mod rayon;
 pub(crate) mod sample_sort;
-pub(crate) mod bucket_sort;

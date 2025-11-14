@@ -25,32 +25,29 @@ use std::mem::size_of;
 // SOFTWARE.
 // ============================================================================
 
+use num_traits::cast::ToPrimitive;
 use rayon;
 use rayon::prelude::*;
-use num_traits::cast::ToPrimitive;
 
-use crate::{DefInt, maybe_uninit_vec};
 use crate::internal::sequence_ops::scan_inplace;
+use crate::{maybe_uninit_vec, DefInt};
 
 const SEQ_THRESHOLD: usize = 8192;
-
 
 fn seq_count_<T: Copy, F: ToPrimitive>(
     inp: &[T],
     keys: &[F],
     counts: &mut [DefInt],
-    num_buckets: usize
+    num_buckets: usize,
 ) {
     let n = inp.len();
     // local counts to avoid false sharing
     let mut lcnt = vec![0; num_buckets];
-    keys[..n]
-        .iter()
-        .for_each(|k| {
-            let k = k.to_usize().unwrap();
-            debug_assert!(k < num_buckets);
-            lcnt[k] += 1;
-        });
+    keys[..n].iter().for_each(|k| {
+        let k = k.to_usize().unwrap();
+        debug_assert!(k < num_buckets);
+        lcnt[k] += 1;
+    });
     counts[..num_buckets]
         .iter_mut()
         .zip(lcnt.iter())
@@ -68,33 +65,27 @@ fn seq_write_<T: Copy, F: ToPrimitive>(
         .iter_mut()
         .zip(offsets.iter())
         .for_each(|(a, b)| *a = *b);
-    inp
-        .iter()
-        .zip(keys.iter())
-        .for_each(|(i, k)| {
-            let k = k.to_usize().unwrap();
-            // reading a raw_pointer
-            unsafe {
-                *(local_offsets[k] as *mut T) = *i;
-            }
-            local_offsets[k] += size_of::<T>();
-        });
+    inp.iter().zip(keys.iter()).for_each(|(i, k)| {
+        let k = k.to_usize().unwrap();
+        // reading a raw_pointer
+        unsafe {
+            *(local_offsets[k] as *mut T) = *i;
+        }
+        local_offsets[k] += size_of::<T>();
+    });
 }
 
 fn seq_write_down_<T: Copy, F: ToPrimitive>(
     inp: &[T],
     out: &mut [T],
     keys: &[F],
-    offsets: &mut [DefInt]
+    offsets: &mut [DefInt],
 ) {
-    inp
-        .iter()
-        .zip(keys.iter())
-        .for_each(|(i, k)| {
-            let k = k.to_usize().unwrap();
-            offsets[k] -= 1;
-            out[offsets[k] as usize] = *i;
-        });
+    inp.iter().zip(keys.iter()).for_each(|(i, k)| {
+        let k = k.to_usize().unwrap();
+        offsets[k] -= 1;
+        out[offsets[k] as usize] = *i;
+    });
 }
 
 pub(crate) fn seq_count_sort_<T: Copy, F: ToPrimitive>(
@@ -102,18 +93,16 @@ pub(crate) fn seq_count_sort_<T: Copy, F: ToPrimitive>(
     out: &mut [T],
     keys: &[F],
     counts: &mut [DefInt],
-    num_buckets: usize
+    num_buckets: usize,
 ) {
     seq_count_(inp, keys, counts, num_buckets);
 
     // generate offsets
     let mut s = 0;
-    counts[..num_buckets]
-        .iter_mut()
-        .for_each(|c| {
-            s += *c;
-            *c = s;
-        });
+    counts[..num_buckets].iter_mut().for_each(|c| {
+        s += *c;
+        *c = s;
+    });
 
     // send to destination
     seq_write_down_(inp, out, keys, counts);
@@ -123,9 +112,8 @@ pub fn seq_count_sort<T: Copy, F: ToPrimitive>(
     inp: &[T],
     out: &mut [T],
     keys: &[F],
-    num_buckets: usize
-) -> Vec<DefInt>
-{
+    num_buckets: usize,
+) -> Vec<DefInt> {
     let mut counts = maybe_uninit_vec![0; num_buckets+1];
     seq_count_sort_(inp, out, keys, &mut counts, num_buckets);
     counts[num_buckets] = inp.len() as DefInt;
@@ -137,13 +125,16 @@ fn count_sort_helper<T, F>(
     out: &mut [T],
     keys: &[F],
     num_buckets: usize,
-    _parallelism: f32
-) -> (Vec<DefInt>, bool) where
+    _parallelism: f32,
+) -> (Vec<DefInt>, bool)
+where
     T: Copy + Send + Sync,
     F: ToPrimitive + Sync,
 {
     let n = inp.len();
-    if n == 0 { return (vec![], false); }
+    if n == 0 {
+        return (vec![], false);
+    }
     let num_threads = rayon::current_num_threads();
 
     let num_blocks = 1 + n * size_of::<T>() / 5000.max(num_buckets * 500);
@@ -170,13 +161,13 @@ fn count_sort_helper<T, F>(
     bucket_offsets[..num_buckets]
         .par_iter_mut()
         .enumerate()
-        .for_each(
-            |(i, dst)| {
-                let mut v = 0;
-                for j in 0..num_blocks {v += counts[j * num_buckets + i];}
-                *dst = v;
+        .for_each(|(i, dst)| {
+            let mut v = 0;
+            for j in 0..num_blocks {
+                v += counts[j * num_buckets + i];
             }
-        );
+            *dst = v;
+        });
     bucket_offsets[num_buckets] = 0;
 
     // scan (prefix sum) on offsets array
@@ -202,8 +193,7 @@ fn count_sort_helper<T, F>(
         });
 
     // write the results in destination
-    inp
-        .par_chunks(block_size)
+    inp.par_chunks(block_size)
         .zip(keys.par_chunks(block_size))
         .zip(dest_offsets.par_chunks(num_buckets))
         .for_each(|((inp_chunk, keys_chunk), dest_chunk)| {
@@ -218,14 +208,17 @@ pub fn count_sort<T, F>(
     out: &mut [T],
     keys: &[F],
     num_buckets: usize,
-    parallelism: f32
-) -> (Vec<DefInt>, bool) where
+    parallelism: f32,
+) -> (Vec<DefInt>, bool)
+where
     T: Copy + Send + Sync,
     F: ToPrimitive + Sync,
 {
     #[cfg(feature = "AW_safe")]
-    eprintln!("AW_safe cannot be used with count_sort for now. \
-        Switched to unsafe AW.");
+    eprintln!(
+        "AW_safe cannot be used with count_sort for now. \
+        Switched to unsafe AW."
+    );
 
     let n = inp.len();
     debug_assert_eq!(n, out.len());

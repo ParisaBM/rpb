@@ -25,9 +25,8 @@ use num_traits::PrimInt;
 // SOFTWARE.
 // ============================================================================
 
-use rayon::iter::*;
 use rayon::iter::plumbing::*;
-
+use rayon::iter::*;
 
 /// Single indirect Parallel iterator over mutable items in a slice
 #[derive(Debug)]
@@ -113,16 +112,18 @@ where
     }
 
     fn split_at(self, index: usize) -> (Self, Self) {
-        let slice_copy = unsafe {
-            std::slice::from_raw_parts_mut(
-                self.slice.as_mut_ptr(),
-                self.slice.len(),
-            )
-        };
+        let slice_copy =
+            unsafe { std::slice::from_raw_parts_mut(self.slice.as_mut_ptr(), self.slice.len()) };
         let (left, right) = self.offsets.split_at(index);
         (
-            SngIndProducer { slice: self.slice, offsets: left },
-            SngIndProducer { slice: slice_copy, offsets: right },
+            SngIndProducer {
+                slice: self.slice,
+                offsets: left,
+            },
+            SngIndProducer {
+                slice: slice_copy,
+                offsets: right,
+            },
         )
     }
 }
@@ -133,9 +134,9 @@ pub(super) struct SngIndSeq<'data, 'offs, T, O: PrimInt> {
     slice: &'data mut [T],
 }
 
-impl <'data, 'offs, T, O> Iterator for SngIndSeq<'data, 'offs, T, O>
+impl<'data, 'offs, T, O> Iterator for SngIndSeq<'data, 'offs, T, O>
 where
-    O: PrimInt
+    O: PrimInt,
 {
     type Item = &'data mut T;
 
@@ -156,26 +157,26 @@ where
     }
 }
 
-impl <'data, 'offs, T, O> ExactSizeIterator for SngIndSeq<'data, 'offs, T, O>
+impl<'data, 'offs, T, O> ExactSizeIterator for SngIndSeq<'data, 'offs, T, O>
 where
-    O: PrimInt
+    O: PrimInt,
 {
     fn len(&self) -> usize {
         self.offsets.len()
     }
 }
 
-impl <'data, 'offst, T, O> DoubleEndedIterator for SngIndSeq<'data, 'offst, T, O>
+impl<'data, 'offst, T, O> DoubleEndedIterator for SngIndSeq<'data, 'offst, T, O>
 where
-    O: PrimInt
+    O: PrimInt,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         match self.offsets.len() {
             0 => None,
             n => {
-                let idx = self.offsets[n-1].to_usize().unwrap();
+                let idx = self.offsets[n - 1].to_usize().unwrap();
                 let r = unsafe { self.slice.as_mut_ptr().add(idx).as_mut().unwrap() };
-                self.offsets = &self.offsets[..n-1];
+                self.offsets = &self.offsets[..n - 1];
                 Some(r)
             }
         }

@@ -28,29 +28,23 @@ use rayon::prelude::*;
 #[cfg(feature = "AW_safe")]
 use std::sync::atomic::AtomicBool;
 
+use crate::graph::EdgeArray;
 use crate::DefInt;
-use crate::{graph::EdgeArray};
 #[cfg(feature = "AW_safe")]
 use crate::ORDER;
 
-#[path="../../common/spec_for.rs"] mod spec_for;
+#[path = "../../common/spec_for.rs"]
+mod spec_for;
 
-use spec_for::{SpecFor, Reservation};
-
+use spec_for::{Reservation, SpecFor};
 
 pub fn maximal_matching(ea: &EdgeArray) -> Vec<DefInt> {
     let n = std::cmp::max(ea.num_rows, ea.num_cols);
     let m = ea.non_zeros;
-    let rs: Vec<Reservation> = (0..n)
-        .into_par_iter()
-        .map(|_| Reservation::new())
-        .collect();
+    let rs: Vec<Reservation> = (0..n).into_par_iter().map(|_| Reservation::new()).collect();
 
     #[cfg(not(feature = "AW_safe"))]
-    let matched: Vec<bool> = (0..n)
-        .into_par_iter()
-        .map(|_| false)
-        .collect();
+    let matched: Vec<bool> = (0..n).into_par_iter().map(|_| false).collect();
     #[cfg(feature = "AW_safe")]
     let matched: Vec<AtomicBool> = (0..n)
         .into_par_iter()
@@ -64,8 +58,9 @@ pub fn maximal_matching(ea: &EdgeArray) -> Vec<DefInt> {
         let (u, v) = (ea[i].u as usize, ea[i].v as usize);
         let i = i as u32;
         #[cfg(not(feature = "AW_safe"))]
-        if matched[u] || matched[v] || u == v { false }
-        else {
+        if matched[u] || matched[v] || u == v {
+            false
+        } else {
             rs[u].reserve(i);
             rs[v].reserve(i);
             true
@@ -98,30 +93,23 @@ pub fn maximal_matching(ea: &EdgeArray) -> Vec<DefInt> {
                 }
                 return true;
             }
+        } else if rs[u].check(i) {
+            rs[u].reset();
         }
-        else if rs[u].check(i) { rs[u].reset(); }
         return false;
     };
 
-    (0..m).spec_for(
-        reserve,
-        commit,
-        10,
-        Some(1024),
-        Some(2048)
-    ).unwrap();
+    (0..m)
+        .spec_for(reserve, commit, 10, Some(1024), Some(2048))
+        .unwrap();
 
     let mut matching_idx = vec![];
     parlay::primitives::pack(
-        &rs
-            .par_iter()
+        &rs.par_iter()
             .map(|r| r.get() as DefInt)
             .collect::<Vec<DefInt>>(),
-        &rs
-            .par_iter()
-            .map(|r| r.reserved())
-            .collect::<Vec<bool>>(),
-        &mut matching_idx
+        &rs.par_iter().map(|r| r.reserved()).collect::<Vec<bool>>(),
+        &mut matching_idx,
     );
 
     matching_idx

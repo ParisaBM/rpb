@@ -27,15 +27,18 @@ use std::time::Duration;
 
 use clap::Parser;
 
-#[path ="mod.rs"] mod hist;
-#[path ="../../misc.rs"] mod misc;
-#[path ="../macros.rs"] mod macros;
-#[path ="../../common/io.rs"] mod io;
+#[path = "mod.rs"]
+mod hist;
+#[path = "../../common/io.rs"]
+mod io;
+#[path = "../macros.rs"]
+mod macros;
+#[path = "../../misc.rs"]
+mod misc;
 
-use misc::*;
-use hist::{sequential, parallel};
+use hist::{parallel, sequential};
 use io::{read_big_file_to_vec, write_slice_to_file_seq};
-
+use misc::*;
 
 #[derive(Parser, Debug)]
 #[clap(version, about, long_about = None)]
@@ -49,26 +52,23 @@ struct Args {
     ofname: String,
 
     /// the input filename
-    #[clap(value_parser, required=true)]
+    #[clap(value_parser, required = true)]
     ifname: String,
 
     /// the number of rounds to execute the benchmark
-    #[clap(short, long, value_parser, required=false, default_value_t=1)]
+    #[clap(short, long, value_parser, required = false, default_value_t = 1)]
     rounds: usize,
 
-    #[clap(short, long, value_parser, required=true)]
+    #[clap(short, long, value_parser, required = true)]
     buckets: usize,
 }
 
-define_algs!(
-    (PARALLEL, "parallel"),
-    (SEQUENTIAL, "sequential")
-);
+define_algs!((PARALLEL, "parallel"), (SEQUENTIAL, "sequential"));
 
 pub fn run(alg: Algs, rounds: usize, buckets: usize, arr: &[u32]) -> (Vec<u32>, Duration) {
     let f = match alg {
-        Algs::PARALLEL => {parallel::hist},
-        Algs::SEQUENTIAL => {sequential::hist}
+        Algs::PARALLEL => parallel::hist,
+        Algs::SEQUENTIAL => sequential::hist,
     };
 
     let mut r = vec![];
@@ -78,9 +78,13 @@ pub fn run(alg: Algs, rounds: usize, buckets: usize, arr: &[u32]) -> (Vec<u32>, 
         "hist",
         rounds,
         Duration::new(1, 0),
-        || { unsafe { *(r_ptr as *mut Vec<u32>).as_mut().unwrap() = vec![]; } },
-        || { f(&arr, buckets, &mut r); },
-        || {}
+        || unsafe {
+            *(r_ptr as *mut Vec<u32>).as_mut().unwrap() = vec![];
+        },
+        || {
+            f(&arr, buckets, &mut r);
+        },
+        || {},
     );
     (r, mean)
 }
@@ -91,15 +95,12 @@ fn main() {
     let mut arr = Vec::new();
     read_big_file_to_vec(
         &args.ifname,
-        Some { 0: |w: &[&str]| {debug_assert_eq!(w[0], "sequenceInt")} },
-        &mut arr
+        Some {
+            0: |w: &[&str]| debug_assert_eq!(w[0], "sequenceInt"),
+        },
+        &mut arr,
     );
     let (r, d) = run(args.algorithm, args.rounds, args.buckets, &arr);
 
-    finalize!(
-        args,
-        r,
-        d,
-        write_slice_to_file_seq(&r, args.ofname)
-    );
+    finalize!(args, r, d, write_slice_to_file_seq(&r, args.ofname));
 }

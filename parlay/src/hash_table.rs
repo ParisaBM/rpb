@@ -37,19 +37,17 @@ pub trait HashHelper {
     fn hash(s: Self::KT) -> usize;
     fn is_empty(s: &Self::ET) -> bool;
     fn get_key(v: Self::ET) -> Self::KT;
-    fn cmp(s: Self::KT, s2:Self::KT) -> Ordering;
+    fn cmp(s: Self::KT, s2: Self::KT) -> Ordering;
     fn replace_q(s: Self::ET, s2: Self::ET) -> bool;
     fn cas(p: &mut Self::ET, o: Self::ET, n: Self::ET) -> bool;
 }
 
-pub struct HashTable<H: HashHelper>
-{
+pub struct HashTable<H: HashHelper> {
     m: usize,
     ta: Vec<H::ET>,
 }
 
-impl<'a, H: HashHelper> HashTable<H>
-{
+impl<'a, H: HashHelper> HashTable<H> {
     fn _clear(_a: &'a mut [H::ET]) {
         todo!();
     }
@@ -63,27 +61,38 @@ impl<'a, H: HashHelper> HashTable<H>
     }
 
     fn increment_index(&self, h: Idx) -> Idx {
-        if h + 1 == self.m { 0 } else { h + 1 }
+        if h + 1 == self.m {
+            0
+        } else {
+            h + 1
+        }
     }
 
     fn _decrement_index(&self, h: Idx) -> Idx {
-        if h == 0 { self.m - 1 } else { h - 1 }
+        if h == 0 {
+            self.m - 1
+        } else {
+            h - 1
+        }
     }
 
     fn _less_index(&self, a: Idx, b: Idx) -> bool {
-        if a < b { 2 * (b - a) < self.m } else { 2 * (a - b) > self.m }
+        if a < b {
+            2 * (b - a) < self.m
+        } else {
+            2 * (a - b) > self.m
+        }
     }
 
     fn _less_eq_index(&self, a: Idx, b: Idx) -> bool {
         a == b || self._less_index(a, b)
     }
 
-
     pub fn new(size: usize, load: f64) -> Self {
         let m = (size as f64 * load) as usize + 100;
         Self {
             m,
-            ta: vec![H::empty(); m]
+            ta: vec![H::empty(); m],
         }
     }
 
@@ -91,18 +100,21 @@ impl<'a, H: HashHelper> HashTable<H>
         let mut i = self.first_index(H::get_key(v));
         loop {
             let c = self.ta[i];
-            let clone = unsafe {
-                (self.ta.as_ptr().add(i) as *mut H::ET).as_mut().unwrap()
-            };
+            let clone = unsafe { (self.ta.as_ptr().add(i) as *mut H::ET).as_mut().unwrap() };
             if H::is_empty(&c) {
-                if H::cas(clone, c, v) { return true; }
+                if H::cas(clone, c, v) {
+                    return true;
+                }
             } else {
                 match H::cmp(H::get_key(v), H::get_key(c)) {
                     Ordering::Less => i = self.increment_index(i),
                     Ordering::Equal => {
-                        if !H::replace_q(v, c) { return false; }
-                        else if H::cas(clone, c, v) { return true; }
-                    },
+                        if !H::replace_q(v, c) {
+                            return false;
+                        } else if H::cas(clone, c, v) {
+                            return true;
+                        }
+                    }
                     Ordering::Greater => {
                         if H::cas(clone, c, v) {
                             v = c;
@@ -124,7 +136,7 @@ impl<'a, H: HashHelper> HashTable<H>
 
     pub fn find(&self, v: H::KT) -> Option<H::ET>
     where
-        H::KT: Copy
+        H::KT: Copy,
     {
         let mut h = self.first_index(v);
         let mut c = self.ta[h];
@@ -133,7 +145,7 @@ impl<'a, H: HashHelper> HashTable<H>
                 Ordering::Less => {
                     h = self.increment_index(h);
                     c = self.ta[h];
-                },
+                }
                 Ordering::Equal => return Some(c),
                 Ordering::Greater => return None,
             }
@@ -165,7 +177,9 @@ impl<'a, H: HashHelper> HashTable<H>
         println!("implement Display for ET");
         print!("vals = ");
         for i in 0..self.m {
-            if !H::is_empty(&self.ta[i]) { print!("{i}, ") }
+            if !H::is_empty(&self.ta[i]) {
+                print!("{i}, ")
+            }
             // if &self.ta[i] as *const H::ET != &self.empty as *const H::ET { print!("{i}, ") }
             // if self.ta[i] != self.empty { print!("{i}:{}, ", self.ta[i]) }
         }

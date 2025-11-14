@@ -25,16 +25,20 @@ use std::time::Duration;
 // SOFTWARE.
 // ============================================================================
 
+#[path = "mod.rs"]
+mod bw;
+#[path = "../../algorithm/bw_encode.rs"]
+mod bw_encode;
+#[path = "../../common/io.rs"]
+mod io;
+#[path = "../macros.rs"]
+mod macros;
+#[path = "../../misc.rs"]
+mod misc;
 
-#[path ="mod.rs"] mod bw;
-#[path ="../../misc.rs"] mod misc;
-#[path ="../macros.rs"] mod macros;
-#[path ="../../common/io.rs"] mod io;
-#[path ="../../algorithm/bw_encode.rs"] mod bw_encode;
-
-use misc::*;
 use bw_encode::bw_encode;
 use io::{chars_from_file, chars_to_file};
+use misc::*;
 
 define_args!(Algs::ListRank);
 
@@ -42,7 +46,7 @@ define_algs!((ListRank, "list-rank"));
 
 pub fn run(alg: Algs, rounds: usize, inp: &[DefChar]) -> (Vec<DefChar>, Duration) {
     let f = match alg {
-        Algs::ListRank => {bw::list_rank::bw_decode},
+        Algs::ListRank => bw::list_rank::bw_decode,
     };
 
     let mut r = vec![];
@@ -52,8 +56,10 @@ pub fn run(alg: Algs, rounds: usize, inp: &[DefChar]) -> (Vec<DefChar>, Duration
         rounds,
         Duration::new(1, 0),
         || {},
-        || { r = f(&inp); },
-        || {}
+        || {
+            r = f(&inp);
+        },
+        || {},
     );
     (r, mean)
 }
@@ -67,10 +73,5 @@ fn main() {
 
     let (r, d) = run(args.algorithm, args.rounds, &encoded);
 
-    finalize!(
-        args,
-        r,
-        d,
-        chars_to_file(&r, args.ofname).unwrap()
-    );
+    finalize!(args, r, d, chars_to_file(&r, args.ofname).unwrap());
 }

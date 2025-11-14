@@ -27,44 +27,31 @@ use rayon::prelude::*;
 
 use enhanced_rayon::prelude::*;
 
-
 #[test]
 fn ones() {
-    let v: Vec<usize> = (0..1000)
-        .into_par_iter()
-        .with_gran(10)
-        .map(|_| 1)
-        .collect();
+    let v: Vec<usize> = (0..1000).into_par_iter().with_gran(10).map(|_| 1).collect();
     assert_eq!(v, vec![1; 1000]);
 }
-
 
 #[test]
 fn evens() {
     let v: Vec<usize> = (0..1000)
         .into_par_iter()
         .with_gran(100)
-        .map(|a| a*2)
+        .map(|a| a * 2)
         .collect();
-    let expected: Vec<usize> = (0..2000)
-        .into_par_iter()
-        .step_by(2)
-        .collect();
+    let expected: Vec<usize> = (0..2000).into_par_iter().step_by(2).collect();
     assert_eq!(v, expected);
 }
-
 
 #[test]
 fn delayed() {
     let v: Vec<usize> = (0..1000)
         .into_par_iter()
-        .map(|a| a*2)
+        .map(|a| a * 2)
         .with_gran(100)
         .map(|a| a)
         .collect();
-    let expected: Vec<usize> = (0..2000)
-        .into_par_iter()
-        .step_by(2)
-        .collect();
+    let expected: Vec<usize> = (0..2000).into_par_iter().step_by(2).collect();
     assert_eq!(v, expected);
 }

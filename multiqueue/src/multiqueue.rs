@@ -29,16 +29,14 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Mutex, MutexGuard};
 
 #[allow(deprecated)]
-use rand::{Rng, thread_rng};
+use rand::{thread_rng, Rng};
 
 use crate::util::Padded;
 
-
 const C: usize = 4;
 
-
 pub struct MultiQueue<PQElem> {
-    pq_list: Vec::<Padded<Mutex<BinaryHeap<PQElem>>>>,
+    pq_list: Vec<Padded<Mutex<BinaryHeap<PQElem>>>>,
     pq_list_size: usize,
     num_empty: AtomicU32,
 }
@@ -73,8 +71,9 @@ impl<PQElem: Ord + Copy> MultiQueue<PQElem> {
         let mut index;
         let q = loop {
             index = thread_rng().gen_range(0..self.pq_list_size);
-            if index == except { continue; }
-            else if let Ok(pq) = self.pq_list[index].try_lock() {
+            if index == except {
+                continue;
+            } else if let Ok(pq) = self.pq_list[index].try_lock() {
                 break pq;
             }
         };
@@ -92,32 +91,43 @@ impl<PQElem: Ord + Copy> MultiQueue<PQElem> {
     // TODO: Mark suggested trying ray's pop.
     pub fn pop(&self) -> Option<PQElem> {
         loop {
-            let (mut val_1, mut val_2) = unsafe { (
-                std::mem::MaybeUninit::<PQElem>::uninit().assume_init(),
-                std::mem::MaybeUninit::<PQElem>::uninit().assume_init()
-            ) };
+            let (mut val_1, mut val_2) = unsafe {
+                (
+                    std::mem::MaybeUninit::<PQElem>::uninit().assume_init(),
+                    std::mem::MaybeUninit::<PQElem>::uninit().assume_init(),
+                )
+            };
 
             let (q_1, idx_1) = self.lock_a_queue();
             let empty_1 = q_1.is_empty();
-            if !empty_1 { val_1 = *q_1.peek().unwrap(); };
+            if !empty_1 {
+                val_1 = *q_1.peek().unwrap();
+            };
             drop(q_1);
 
             let (q_2, idx_2) = self.lock_a_queue_except(idx_1);
             let empty_2 = q_2.is_empty();
-            if !empty_2 { val_2 = *q_2.peek().unwrap(); };
+            if !empty_2 {
+                val_2 = *q_2.peek().unwrap();
+            };
             drop(q_2);
 
             let selected;
             if empty_1 && empty_2 {
-                if self.num_empty.load(Ordering::Relaxed)
-                    == self.pq_list_size as u32 { return None; }
-                else { continue; }
+                if self.num_empty.load(Ordering::Relaxed) == self.pq_list_size as u32 {
+                    return None;
+                } else {
+                    continue;
+                }
             } else if !empty_1 {
                 if !empty_2 {
-                    selected = if val_1 > val_2 { idx_1 }
-                    else { idx_2 }
-                } else { selected = idx_1; }
-            } else { selected = idx_2; }
+                    selected = if val_1 > val_2 { idx_1 } else { idx_2 }
+                } else {
+                    selected = idx_1;
+                }
+            } else {
+                selected = idx_2;
+            }
 
             let mut q = self.pq_list[selected].lock().unwrap();
             if let Some(ret) = q.pop() {
@@ -125,11 +135,12 @@ impl<PQElem: Ord + Copy> MultiQueue<PQElem> {
                     self.num_empty.fetch_add(1, Ordering::Relaxed);
                 }
                 return Some(ret);
-            } else { continue; }
+            } else {
+                continue;
+            }
         }
     }
 }
-
 
 #[cfg(test)]
 mod multiqueue_tests {

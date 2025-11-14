@@ -25,11 +25,9 @@ use rayon::prelude::*;
 // SOFTWARE.
 // ============================================================================
 
-
 use crate::internal::binary_search::binary_search;
 
 const MERGE_BASE: usize = 2000;
-
 
 pub(crate) fn seq_merge<T, F>(in1: &[T], in2: &[T], out: &mut [T], less: F)
 where
@@ -41,22 +39,28 @@ where
     let (mut i, mut j) = (0, 0);
 
     loop {
-        if i == n1 { // if inp1 has no more elements
-            for j in j..n2 { out[i+j] = in2[j]; }
+        if i == n1 {
+            // if inp1 has no more elements
+            for j in j..n2 {
+                out[i + j] = in2[j];
+            }
             break;
         }
-        if j == n2 { // if inp2 has no more elements
-            for i in i..n1 { out[i+j] = in1[i]; }
+        if j == n2 {
+            // if inp2 has no more elements
+            for i in i..n1 {
+                out[i + j] = in1[i];
+            }
             break;
         }
 
-        let oi = &mut out[i+j];
+        let oi = &mut out[i + j];
         if less(in2[j], in1[i]) {
             *oi = in2[j];
             j += 1;
         } else {
             *oi = in1[i];
-            i+=1;
+            i += 1;
         }
     }
 }
@@ -72,15 +76,20 @@ where
 
     if no < MERGE_BASE {
         seq_merge(in1, in2, out, less);
-    }
-    else if n1 == 0 {
-        out.par_iter_mut().zip(in2.par_iter()).for_each(|(o, i)| *o = *i); }
-    else if n2 == 0 {
-        out.par_iter_mut().zip(in1.par_iter()).for_each(|(o, i)| *o = *i); }
-    else {
+    } else if n1 == 0 {
+        out.par_iter_mut()
+            .zip(in2.par_iter())
+            .for_each(|(o, i)| *o = *i);
+    } else if n2 == 0 {
+        out.par_iter_mut()
+            .zip(in1.par_iter())
+            .for_each(|(o, i)| *o = *i);
+    } else {
         let mut m1 = n1 / 2;
         let m2 = binary_search(in2, in1[m1], less.clone());
-        if m2 == 0 { m1 += 1; }
+        if m2 == 0 {
+            m1 += 1;
+        }
         let mo = m1 + m2;
         let (l_out, r_out) = out.split_at_mut(mo);
         let less_clone = less.clone();

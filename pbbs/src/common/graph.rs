@@ -27,7 +27,7 @@ use std::{ops::Index, str::FromStr};
 
 use rayon::prelude::*;
 
-use crate::{DefInt, DefFloat};
+use crate::{DefFloat, DefInt};
 
 // **************************************************************
 //    EDGE ARRAY REPRESENTATION
@@ -40,22 +40,29 @@ pub struct Edge {
 }
 
 impl Edge {
-    pub fn new(u: DefInt, v: DefInt) -> Self { Self { u, v } }
+    pub fn new(u: DefInt, v: DefInt) -> Self {
+        Self { u, v }
+    }
 }
 
-impl Default for Edge { fn default() -> Self { Self { u: 0, v: 0 } } }
+impl Default for Edge {
+    fn default() -> Self {
+        Self { u: 0, v: 0 }
+    }
+}
 
 impl FromStr for Edge {
     type Err = ParseEdgeError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let s: Vec<&str> = s
-            .trim()
-            .split_whitespace()
-            .collect();
-        if s.len() != 2 { return Err(ParseEdgeError); }
+        let s: Vec<&str> = s.trim().split_whitespace().collect();
+        if s.len() != 2 {
+            return Err(ParseEdgeError);
+        }
         let (a, b) = (s[0].parse(), s[1].parse());
-        if a.is_err() || b.is_err() { return Err(ParseEdgeError); }
+        if a.is_err() || b.is_err() {
+            return Err(ParseEdgeError);
+        }
         Ok(Self::new(a.unwrap(), b.unwrap()))
     }
 }
@@ -70,7 +77,12 @@ impl std::fmt::Display for ParseEdgeError {
 
 impl std::fmt::Debug for ParseEdgeError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{{ file: {}, line: {} }}: can not parse as edge.", file!(), line!())
+        write!(
+            f,
+            "{{ file: {}, line: {} }}: can not parse as edge.",
+            file!(),
+            line!()
+        )
     }
 }
 
@@ -87,7 +99,7 @@ impl EdgeArray {
             non_zeros: es.len(),
             es,
             num_rows: r,
-            num_cols: c
+            num_cols: c,
         }
     }
 }
@@ -97,7 +109,9 @@ impl Index<usize> for EdgeArray {
 
     fn index(&self, index: usize) -> &Self::Output {
         #[cfg(not(feature = "mem_safe"))]
-        unsafe { self.es.as_ptr().add(index).as_ref().unwrap() }
+        unsafe {
+            self.es.as_ptr().add(index).as_ref().unwrap()
+        }
         #[cfg(feature = "mem_safe")]
         &self.es[index]
     }
@@ -115,12 +129,15 @@ pub struct WghEdge {
 }
 
 impl WghEdge {
-    pub fn new(u: DefInt, v: DefInt, w: DefFloat) -> Self
-    { Self { u, v, w } }
+    pub fn new(u: DefInt, v: DefInt, w: DefFloat) -> Self {
+        Self { u, v, w }
+    }
 }
 
 impl Default for WghEdge {
-    fn default() -> Self { Self { u: 0, v: 0, w: 0.0 } }
+    fn default() -> Self {
+        Self { u: 0, v: 0, w: 0.0 }
+    }
 }
 
 impl FromStr for WghEdge {
@@ -128,7 +145,9 @@ impl FromStr for WghEdge {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s: Vec<&str> = s.trim().split_whitespace().collect();
-        if s.len() != 3 { return Err(ParseEdgeError); }
+        if s.len() != 3 {
+            return Err(ParseEdgeError);
+        }
         let (a, b, w) = (s[0].parse(), s[1].parse(), s[2].parse());
         if a.is_err() || b.is_err() || w.is_err() {
             return Err(ParseEdgeError);
@@ -163,25 +182,30 @@ impl Index<usize> for WghEdgeArray {
     }
 }
 
-
 // **************************************************************
 //    ADJACENCY ARRAY REPRESENTATION
 // **************************************************************
 
 pub struct Vertex<'a> {
-    pub neighbors: &'a[DefInt],
+    pub neighbors: &'a [DefInt],
     pub degree: usize,
 }
 
 impl<'a> Vertex<'a> {
-    pub fn new(n: &'a[DefInt], d: usize) -> Self {
-        Self { neighbors: n, degree: d }
+    pub fn new(n: &'a [DefInt], d: usize) -> Self {
+        Self {
+            neighbors: n,
+            degree: d,
+        }
     }
 }
 
 impl<'a> Default for Vertex<'a> {
     fn default() -> Self {
-        Self { neighbors: &[], degree: 0 }
+        Self {
+            neighbors: &[],
+            degree: 0,
+        }
     }
 }
 
@@ -194,29 +218,31 @@ pub struct Graph {
 }
 
 impl Graph {
-    pub const fn num_vertices(&self) -> usize
-    { self.n }
+    pub const fn num_vertices(&self) -> usize {
+        self.n
+    }
 
     pub fn num_edges(&self) -> usize {
-        if self.degrees.len() == 0 { self.m }
-        else {
+        if self.degrees.len() == 0 {
+            self.m
+        } else {
             todo!("not yet implemented!");
         }
     }
 
-    pub const fn get_offsets(&self) -> &Vec<DefInt>
-    { &self.offsets }
+    pub const fn get_offsets(&self) -> &Vec<DefInt> {
+        &self.offsets
+    }
 
     pub fn add_degrees(&mut self) {
         debug_assert!(self.degrees.len() == 0);
         self.degrees = (0..self.n)
             .into_par_iter()
-            .map(|i| self.offsets[i+1] - self.offsets[i])
+            .map(|i| self.offsets[i + 1] - self.offsets[i])
             .collect();
     }
 
-    pub fn new(offsets: &[DefInt], edges: &[DefInt], n: usize) -> Self
-    {
+    pub fn new(offsets: &[DefInt], edges: &[DefInt], n: usize) -> Self {
         debug_assert_eq!(n + 1, offsets.len());
         debug_assert_eq!(edges.len(), offsets[n] as usize);
 
@@ -234,10 +260,7 @@ impl Graph {
     pub fn index(&self, i: usize) -> Vertex {
         debug_assert!(i < self.n);
 
-        let (of, of_next) = (
-            self.offsets[i] as usize,
-            self.offsets[i+1] as usize
-        );
+        let (of, of_next) = (self.offsets[i] as usize, self.offsets[i + 1] as usize);
 
         let d = match self.degrees.len() {
             0 => of_next - of,
@@ -245,6 +268,9 @@ impl Graph {
         };
         let n = &self.edges[of..of_next];
 
-        Vertex { neighbors: n, degree: d, }
+        Vertex {
+            neighbors: n,
+            degree: d,
+        }
     }
 }

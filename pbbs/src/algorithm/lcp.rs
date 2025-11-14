@@ -27,10 +27,10 @@ use rayon::prelude::*;
 
 use enhanced_rayon::prelude::*;
 
-use parlay::{Timer, maybe_uninit_vec};
+use crate::range_min::{AtomU32RangeMin, RangeMin};
+use crate::{DefAtomInt, DefChar, DefInt, ORDER};
 use parlay::primitives::pack_index;
-use crate::{DefChar, DefInt, DefAtomInt, ORDER};
-use crate::range_min::{RangeMin, AtomU32RangeMin};
+use parlay::{maybe_uninit_vec, Timer};
 
 #[allow(dead_code)]
 pub fn lcp(s: &[DefChar], sa: &[DefInt]) -> Vec<DefInt> {
@@ -41,41 +41,49 @@ pub fn lcp(s: &[DefChar], sa: &[DefInt]) -> Vec<DefInt> {
 
     // compare first len characters of adjacent strings from SA.
     #[allow(unused_mut)]
-    let mut l: Vec<_> = (0..n-1).into_par_iter().map(|i| {
-        let mut j = 0;
-        let max_j = len.min(n-sa[i] as usize);
-        while j < max_j &&
-            {
+    let mut l: Vec<_> = (0..n - 1)
+        .into_par_iter()
+        .map(|i| {
+            let mut j = 0;
+            let max_j = len.min(n - sa[i] as usize);
+            while j < max_j && {
                 #[cfg(feature = "mem_safe")]
-                { s[sa[i] as usize + j] == s[sa[i+1] as usize + j] }
+                {
+                    s[sa[i] as usize + j] == s[sa[i + 1] as usize + j]
+                }
                 #[cfg(not(feature = "mem_safe"))]
                 unsafe {
-                    s.as_ptr().add(sa[i] as usize + j).read() ==
-                    s.as_ptr().add(sa[i+1] as usize + j).read()
+                    s.as_ptr().add(sa[i] as usize + j).read()
+                        == s.as_ptr().add(sa[i + 1] as usize + j).read()
                 }
+            } {
+                j += 1;
             }
-        { j+=1; }
-        (if j < len { j } else { n }) as DefInt
-    }).collect();
+            (if j < len { j } else { n }) as DefInt
+        })
+        .collect();
 
     t.next("head");
 
     // keep indices for which we do not yet know their LCP (i.e. LCP >= len)
     let mut remain = Vec::<u32>::new();
     pack_index(
-        &l.par_iter().map(|&li| li as usize == n).collect::<Vec<bool>>(),
-        &mut remain
+        &l.par_iter()
+            .map(|&li| li as usize == n)
+            .collect::<Vec<bool>>(),
+        &mut remain,
     );
     t.next("pack");
 
-    if remain.len() == 0 { return l; }
+    if remain.len() == 0 {
+        return l;
+    }
 
     // an inverse permutation for SA
     #[allow(unused_mut)]
     let mut isa: Vec<DefInt> = maybe_uninit_vec![DefInt::default(); n];
 
-    isa
-        .par_ind_iter_mut(sa)
+    isa.par_ind_iter_mut(sa)
         .enumerate()
         .for_each(|(i, isa_i)| *isa_i = i as DefInt);
     t.next("inverse");
@@ -89,29 +97,38 @@ pub fn lcp(s: &[DefChar], sa: &[DefInt]) -> Vec<DefInt> {
         let rq = RangeMin::new(&l, |a, b| a < b, 111);
         t.next("make range");
 
-        remain = remain.into_par_iter().filter(|&i| {
-            let i = i as usize;
-            if sa[i] as usize + len >= n {
-                unsafe {(l.as_ptr() as *mut DefInt).add(i).write(len as DefInt);}
-                return false;
-            }
-            let i1 = isa[len + sa[i] as usize];
-            let i2 = isa[len + sa[i+1] as usize];
-            let li = l[rq.query(i1, i2-1) as usize];
-            if (li as usize) < len {
-                unsafe {(l.as_ptr() as *mut DefInt).add(i).write(len as DefInt + li);}
-                return false;
-            }
-            else { return true; }
-        }).collect();
+        remain = remain
+            .into_par_iter()
+            .filter(|&i| {
+                let i = i as usize;
+                if sa[i] as usize + len >= n {
+                    unsafe {
+                        (l.as_ptr() as *mut DefInt).add(i).write(len as DefInt);
+                    }
+                    return false;
+                }
+                let i1 = isa[len + sa[i] as usize];
+                let i2 = isa[len + sa[i + 1] as usize];
+                let li = l[rq.query(i1, i2 - 1) as usize];
+                if (li as usize) < len {
+                    unsafe {
+                        (l.as_ptr() as *mut DefInt).add(i).write(len as DefInt + li);
+                    }
+                    return false;
+                } else {
+                    return true;
+                }
+            })
+            .collect();
         t.next("filter");
 
         len *= 2;
-        if remain.len() <= 0 { break; }
+        if remain.len() <= 0 {
+            break;
+        }
     }
     return l;
 }
-
 
 #[allow(dead_code)]
 pub fn atomic_lcp(s: &[DefChar], sa: &[DefAtomInt]) -> Vec<DefAtomInt> {
@@ -121,37 +138,43 @@ pub fn atomic_lcp(s: &[DefChar], sa: &[DefAtomInt]) -> Vec<DefAtomInt> {
     t.next("init");
 
     // compare first len characters of adjacent strings from SA.
-    let l: Vec<_> = (0..n-1).into_par_iter().map(|i| {
-        let mut j = 0;
-        let max_j = len.min(n-sa[i].load(ORDER) as usize);
-        while j < max_j &&
-            {
+    let l: Vec<_> = (0..n - 1)
+        .into_par_iter()
+        .map(|i| {
+            let mut j = 0;
+            let max_j = len.min(n - sa[i].load(ORDER) as usize);
+            while j < max_j && {
                 #[cfg(feature = "mem_safe")]
                 {
-                    s[sa[i].load(ORDER) as usize + j]
-                        == s[sa[i+1].load(ORDER) as usize + j]
+                    s[sa[i].load(ORDER) as usize + j] == s[sa[i + 1].load(ORDER) as usize + j]
                 }
                 #[cfg(not(feature = "mem_safe"))]
                 unsafe {
                     s.as_ptr().add(sa[i].load(ORDER) as usize + j).read()
-                        == s.as_ptr().add(sa[i+1].load(ORDER) as usize + j).read()
+                        == s.as_ptr().add(sa[i + 1].load(ORDER) as usize + j).read()
                 }
+            } {
+                j += 1;
             }
-        { j+=1; }
-        DefAtomInt::new((if j < len { j } else { n }) as DefInt)
-    }).collect();
+            DefAtomInt::new((if j < len { j } else { n }) as DefInt)
+        })
+        .collect();
 
     t.next("head");
 
     // keep indices for which we do not yet know their LCP (i.e. LCP >= len)
     let mut remain = Vec::<u32>::new();
     pack_index(
-        &l.par_iter().map(|li| li.load(ORDER) as usize == n).collect::<Vec<bool>>(),
-        &mut remain
+        &l.par_iter()
+            .map(|li| li.load(ORDER) as usize == n)
+            .collect::<Vec<bool>>(),
+        &mut remain,
     );
     t.next("pack");
 
-    if remain.len() == 0 { return l; }
+    if remain.len() == 0 {
+        return l;
+    }
 
     // an inverse permutation for SA
     let isa: Vec<DefAtomInt> = (0..n)
@@ -159,9 +182,9 @@ pub fn atomic_lcp(s: &[DefChar], sa: &[DefAtomInt]) -> Vec<DefAtomInt> {
         .map(|i| DefAtomInt::new(i as DefInt))
         .collect();
 
-    (0..n).into_par_iter().for_each(|i|
-        isa[sa[i].load(ORDER) as usize].store(i as DefInt, ORDER)
-    );
+    (0..n)
+        .into_par_iter()
+        .for_each(|i| isa[sa[i].load(ORDER) as usize].store(i as DefInt, ORDER));
     t.next("inverse");
 
     // repeatedly double len determining LCP by joining next len chars
@@ -173,25 +196,31 @@ pub fn atomic_lcp(s: &[DefChar], sa: &[DefAtomInt]) -> Vec<DefAtomInt> {
         let rq = AtomU32RangeMin::new(&l, |a, b| a < b, 111);
         t.next("make range");
 
-        remain = remain.into_par_iter().filter(|&i| {
-            let i = i as usize;
-            if sa[i].load(ORDER) as usize + len >= n {
-                l[i].store(len as DefInt, ORDER);
-                return false;
-            }
-            let i1 = isa[len + sa[i].load(ORDER) as usize].load(ORDER);
-            let i2 = isa[len + sa[i+1].load(ORDER) as usize].load(ORDER);
-            let li = l[rq.query(i1, i2-1) as usize].load(ORDER);
-            if (li as usize) < len {
-                l[i].store(len as DefInt + li, ORDER);
-                return false;
-            }
-            else { return true; }
-        }).collect();
+        remain = remain
+            .into_par_iter()
+            .filter(|&i| {
+                let i = i as usize;
+                if sa[i].load(ORDER) as usize + len >= n {
+                    l[i].store(len as DefInt, ORDER);
+                    return false;
+                }
+                let i1 = isa[len + sa[i].load(ORDER) as usize].load(ORDER);
+                let i2 = isa[len + sa[i + 1].load(ORDER) as usize].load(ORDER);
+                let li = l[rq.query(i1, i2 - 1) as usize].load(ORDER);
+                if (li as usize) < len {
+                    l[i].store(len as DefInt + li, ORDER);
+                    return false;
+                } else {
+                    return true;
+                }
+            })
+            .collect();
         t.next("filter");
 
         len *= 2;
-        if remain.len() <= 0 { break; }
+        if remain.len() <= 0 {
+            break;
+        }
     }
     return l;
 }

@@ -25,7 +25,6 @@ use parlay::internal::integer_sort::integer_sort;
 // SOFTWARE.
 // ============================================================================
 
-
 pub fn int_sort(inp: &[u32], bits: usize, dest: &mut Vec<u32>) {
     let get_key = |x| x;
     integer_sort(inp, &get_key, bits, dest)

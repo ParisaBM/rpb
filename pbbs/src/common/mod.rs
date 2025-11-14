@@ -25,13 +25,12 @@ pub(crate) mod io;
 // SOFTWARE.
 // ============================================================================
 
-pub(crate) mod graph;
 pub(crate) mod atomics;
+pub(crate) mod geometry;
+pub(crate) mod geometry_io;
+pub(crate) mod graph;
 pub(crate) mod graph_io;
 pub(crate) mod spec_for;
-pub(crate) mod topology;
-pub(crate) mod geometry;
 pub(crate) mod time_loop;
-pub(crate) mod geometry_io;
+pub(crate) mod topology;
 pub(crate) mod topology_from_triangles;
-

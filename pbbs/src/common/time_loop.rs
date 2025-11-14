@@ -25,9 +25,7 @@ use std::time::Duration;
 // SOFTWARE.
 // ============================================================================
 
-
 use parlay::Timer;
-
 
 /// Runs a function `runf` for `r` times and returns the mean time.
 /// Before each run, `initf` is called and after each run `endf` is called.
@@ -38,7 +36,7 @@ pub fn time_loop<S, W, T>(
     delay: Duration,
     mut initf: S,
     mut runf: W,
-    mut endf: T
+    mut endf: T,
 ) -> Duration
 where
     S: FnMut(),
@@ -49,7 +47,11 @@ where
     let mut ot = Timer::new("OutLoopTime");
 
     t.start();
-    while t.total_time() < delay { initf(); runf(); endf(); }
+    while t.total_time() < delay {
+        initf();
+        runf();
+        endf();
+    }
 
     ot.start();
     for _ in 0..r {

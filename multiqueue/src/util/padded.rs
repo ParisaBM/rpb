@@ -25,7 +25,6 @@ use std::ops::{Deref, DerefMut};
 // SOFTWARE.
 // ============================================================================
 
-
 #[repr(align(64))]
 pub struct Padded<T> {
     value: T,
@@ -39,9 +38,13 @@ impl<T> Padded<T> {
 
 impl<T> Deref for Padded<T> {
     type Target = T;
-    fn deref(&self) -> &Self::Target { &self.value }
+    fn deref(&self) -> &Self::Target {
+        &self.value
+    }
 }
 
 impl<T> DerefMut for Padded<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.value }
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.value
+    }
 }

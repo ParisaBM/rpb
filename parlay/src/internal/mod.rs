@@ -25,13 +25,13 @@ mod transpose;
 // SOFTWARE.
 // ============================================================================
 
-pub mod merge;
-pub mod group_by;
-pub mod integer_sort;
-pub mod sequence_ops;
-pub mod counting_sort;
 pub mod binary_search;
 pub mod collect_reduce;
+pub mod counting_sort;
+pub mod group_by;
+pub mod integer_sort;
+pub mod merge;
+pub mod sequence_ops;
 
 mod merge_sort;
 pub use merge_sort::*;

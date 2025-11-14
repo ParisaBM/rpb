@@ -25,13 +25,11 @@ use num_traits::PrimInt;
 // SOFTWARE.
 // ============================================================================
 
-
-
 pub fn hist<T>(inp: &[T], buckets: usize, res: &mut Vec<T>)
 where
     T: PrimInt + Default + Send + Sync,
 {
-    let mut result = vec![T::zero(); buckets+1];
+    let mut result = vec![T::zero(); buckets + 1];
     for e in inp.iter() {
         let i = (*e).to_usize().unwrap();
         result[i] = result[i] + T::one();

@@ -25,10 +25,9 @@ use std::ops::Range;
 // SOFTWARE.
 // ============================================================================
 
-use std::marker::PhantomData;
 use rayon::iter::plumbing::*;
 use rayon::iter::*;
-
+use std::marker::PhantomData;
 
 /// Parallel iterator over mutable non-overlapping chunks of a slice
 #[derive(Debug)]
@@ -43,12 +42,12 @@ where
     T: Send,
     O: Fn(usize) -> usize + Send + Clone,
 {
-    pub(super) fn new(
-        offset: O,
-        range: Range<usize>,
-        slice: &'data mut [T]
-    ) -> Self {
-        Self { offset, range, slice }
+    pub(super) fn new(offset: O, range: Range<usize>, slice: &'data mut [T]) -> Self {
+        Self {
+            offset,
+            range,
+            slice,
+        }
     }
 }
 
@@ -141,7 +140,6 @@ where
     }
 }
 
-
 pub(super) struct ChunkSeqMut<'data, T, O>
 where
     T: 'data,
@@ -150,10 +148,10 @@ where
     offset: O,
     range: Range<usize>,
     ptr: *mut [T],
-    _marker: PhantomData<&'data mut T>
+    _marker: PhantomData<&'data mut T>,
 }
 
-impl <'data, T, O> Iterator for ChunkSeqMut<'data, T, O>
+impl<'data, T, O> Iterator for ChunkSeqMut<'data, T, O>
 where
     O: Fn(usize) -> usize + Clone,
 {
@@ -165,7 +163,7 @@ where
             1 => {
                 self.range = self.range.end..self.range.end;
                 Some(unsafe { &mut *self.ptr })
-            },
+            }
             _ => {
                 let bias = self.range.start;
                 let size = (self.offset)(1 + bias) - (self.offset)(bias);
@@ -183,7 +181,7 @@ where
     }
 }
 
-impl <'data, T, O> ExactSizeIterator for ChunkSeqMut<'data, T, O>
+impl<'data, T, O> ExactSizeIterator for ChunkSeqMut<'data, T, O>
 where
     O: Fn(usize) -> usize + Clone,
 {
@@ -192,7 +190,7 @@ where
     }
 }
 
-impl <'data, T, O> DoubleEndedIterator for ChunkSeqMut<'data, T, O>
+impl<'data, T, O> DoubleEndedIterator for ChunkSeqMut<'data, T, O>
 where
     O: Fn(usize) -> usize + Clone,
 {
@@ -202,7 +200,7 @@ where
             1 => {
                 self.range = self.range.start..self.range.start;
                 Some(unsafe { &mut *self.ptr })
-            },
+            }
             n => {
                 let bias = self.range.start;
                 let skip = (self.offset)(n - 1 + bias) - (self.offset)(bias);
@@ -214,4 +212,3 @@ where
         }
     }
 }
-

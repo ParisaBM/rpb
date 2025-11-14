@@ -1,4 +1,3 @@
-
 // ============================================================================
 // This code is part of RPB.
 // ----------------------------------------------------------------------------
@@ -27,30 +26,31 @@
 
 use std::time::Duration;
 
-#[path ="mod.rs"] mod lrs;
-#[path ="../../misc.rs"] mod misc;
-#[path ="../macros.rs"] mod macros;
-#[path ="../../common/io.rs"] mod io;
-#[path ="../../algorithm/lcp.rs"] mod lcp;
-#[path ="../../algorithm/range_min.rs"] mod range_min;
-#[path ="../../algorithm/suffix_array.rs"] mod suffix_array;
+#[path = "../../common/io.rs"]
+mod io;
+#[path = "../../algorithm/lcp.rs"]
+mod lcp;
+#[path = "mod.rs"]
+mod lrs;
+#[path = "../macros.rs"]
+mod macros;
+#[path = "../../misc.rs"]
+mod misc;
+#[path = "../../algorithm/range_min.rs"]
+mod range_min;
+#[path = "../../algorithm/suffix_array.rs"]
+mod suffix_array;
 
-use misc::*;
-use lrs::doubling;
 use io::{chars_from_file, chars_to_file};
+use lrs::doubling;
+use misc::*;
 
 define_args!(Algs::Doubling);
 define_algs!((Doubling, "doubling"));
 
-
-pub fn run(
-    alg: Algs,
-    rounds: usize,
-    inp: &[DefChar]
-) -> ((usize, usize, usize), Duration)
-{
+pub fn run(alg: Algs, rounds: usize, inp: &[DefChar]) -> ((usize, usize, usize), Duration) {
     let f = match alg {
-        Algs::Doubling => {doubling::lrs},
+        Algs::Doubling => doubling::lrs,
     };
 
     let mut r = (0, 0, 0);
@@ -60,8 +60,10 @@ pub fn run(
         rounds,
         Duration::new(1, 0),
         || {},
-        || { r = f(&inp); },
-        || {}
+        || {
+            r = f(&inp);
+        },
+        || {},
     );
     (r, mean)
 }
@@ -75,7 +77,9 @@ fn main() {
     let out = format!("len:{len}\tloc1:{loc1}\tloc2:{loc2}");
     if !args.ofname.is_empty() {
         chars_to_file(out.as_bytes(), args.ofname).unwrap();
-    } else { println!("{}", out); }
+    } else {
+        println!("{}", out);
+    }
 
     println!("{:?}", d);
 }

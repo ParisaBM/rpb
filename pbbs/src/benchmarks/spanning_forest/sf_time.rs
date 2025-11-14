@@ -25,34 +25,37 @@
 // SOFTWARE.
 // ============================================================================
 
-
 use std::time::Duration;
 
-#[path ="mod.rs"] mod sf;
-#[path ="../../misc.rs"] mod misc;
-#[path ="../macros.rs"] mod macros;
-#[path ="../../common/io.rs"] mod io;
-#[path ="../../common/graph.rs"] mod graph;
-#[path ="../../common/graph_io.rs"] mod graph_io;
-#[path ="../../algorithm/union_find.rs"] mod union_find;
+#[path = "../../common/graph.rs"]
+mod graph;
+#[path = "../../common/graph_io.rs"]
+mod graph_io;
+#[path = "../../common/io.rs"]
+mod io;
+#[path = "../macros.rs"]
+mod macros;
+#[path = "../../misc.rs"]
+mod misc;
+#[path = "mod.rs"]
+mod sf;
+#[path = "../../algorithm/union_find.rs"]
+mod union_find;
 
-use misc::*;
-use sf::{ incremental_sf, serial_sf };
-use graph_io::read_edge_array_from_file;
 use graph::EdgeArray;
+use graph_io::read_edge_array_from_file;
 use io::write_slice_to_file_seq;
+use misc::*;
+use sf::{incremental_sf, serial_sf};
 
 define_args!(Algs::INCREMENTAL);
 
-define_algs!(
-    (SERIAL, "serial"),
-    (INCREMENTAL, "incremental")
-);
+define_algs!((SERIAL, "serial"), (INCREMENTAL, "incremental"));
 
 pub fn run(alg: Algs, rounds: usize, ea: EdgeArray) -> (Vec<DefInt>, Duration) {
     let sf = match alg {
-        Algs::SERIAL => { serial_sf::spanning_forest },
-        Algs::INCREMENTAL => { incremental_sf::spanning_forest },
+        Algs::SERIAL => serial_sf::spanning_forest,
+        Algs::INCREMENTAL => incremental_sf::spanning_forest,
     };
 
     let mut r = vec![];
@@ -62,8 +65,10 @@ pub fn run(alg: Algs, rounds: usize, ea: EdgeArray) -> (Vec<DefInt>, Duration) {
         rounds,
         Duration::new(1, 0),
         || {},
-        || { r = sf(&ea); },
-        || {}
+        || {
+            r = sf(&ea);
+        },
+        || {},
     );
     (r, mean)
 }
@@ -74,10 +79,5 @@ fn main() {
     let g = read_edge_array_from_file(&args.ifname);
     let (r, d) = run(args.algorithm, args.rounds, g);
 
-    finalize!(
-        args,
-        r,
-        d,
-        write_slice_to_file_seq(&r, args.ofname)
-    );
+    finalize!(args, r, d, write_slice_to_file_seq(&r, args.ofname));
 }

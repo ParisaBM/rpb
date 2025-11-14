@@ -25,17 +25,16 @@ use std::io::Write;
 // SOFTWARE.
 // ============================================================================
 
+use clap::Parser;
+use rayon::prelude::*;
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 use std::time::Instant;
-use clap::Parser;
-use rayon::prelude::*;
 
-use multiqueue::MultiQueue;
+use multiqueue::util::termination_detection::{try_do, TerminationData};
 use multiqueue::util::Graph;
-use multiqueue::util::termination_detection::{TerminationData, try_do};
-
+use multiqueue::MultiQueue;
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
 struct ValType(usize, usize);
@@ -52,21 +51,17 @@ impl PartialOrd for ValType {
     }
 }
 
-
 struct SharedData {
     shortest_distance: Vec<AtomicUsize>,
     term_data: TerminationData,
 }
 
-fn process_node(
-    val: ValType,
-    graph: &Graph,
-    data: &SharedData,
-    pq: &MultiQueue<ValType>
-) {
+fn process_node(val: ValType, graph: &Graph, data: &SharedData, pq: &MultiQueue<ValType>) {
     let (dist, src) = (val.0, val.1);
 
-    if data.shortest_distance[src].load(Ordering::Relaxed) < dist { return; }
+    if data.shortest_distance[src].load(Ordering::Relaxed) < dist {
+        return;
+    }
 
     let new_distance = dist + 1;
     for i in graph.nodes[src]..graph.nodes[src + 1] {
@@ -83,20 +78,22 @@ fn process_node(
                 Ok(_) => {
                     pq.push(ValType(new_distance, target));
                     break;
-                },
+                }
                 Err(x) => old_distance = x,
             }
         }
     }
 }
 
-fn main_loop(
-    graph: &Graph,
-    pq: &MultiQueue<ValType>,
-    data: &SharedData,
-) {
+fn main_loop(graph: &Graph, pq: &MultiQueue<ValType>, data: &SharedData) {
     while let Ok(val) = try_do(
-        &|| if let Some(val) = pq.pop() { Ok(val) } else { Err(()) },
+        &|| {
+            if let Some(val) = pq.pop() {
+                Ok(val)
+            } else {
+                Err(())
+            }
+        },
         &data.term_data,
     ) {
         process_node(val, graph, data, pq);
@@ -121,13 +118,10 @@ fn launch_threads_and_wait(
 }
 
 // Verification method adopted from Galois
-fn verify_distance(
-    graph: &Graph,
-    distance: &[AtomicUsize]
-) {
+fn verify_distance(graph: &Graph, distance: &[AtomicUsize]) {
     let mut failed = false;
     let max = AtomicUsize::new(0);
-    distance.iter().enumerate().for_each(|(v,x)| {
+    distance.iter().enumerate().for_each(|(v, x)| {
         let dist = x.load(Ordering::Relaxed);
         if dist != usize::MAX {
             for i in graph.nodes[v]..graph.nodes[v + 1] {
@@ -139,13 +133,11 @@ fn verify_distance(
             }
             let mut cur_max = max.load(Ordering::Relaxed);
             while dist > cur_max {
-                match max.compare_exchange_weak(
-                    cur_max,
-                    dist,
-                    Ordering::SeqCst,
-                    Ordering::Relaxed,
-                ) {
-                    Ok(_) => { break; },
+                match max.compare_exchange_weak(cur_max, dist, Ordering::SeqCst, Ordering::Relaxed)
+                {
+                    Ok(_) => {
+                        break;
+                    }
                     Err(new_max) => cur_max = new_max,
                 }
             }
@@ -189,7 +181,8 @@ fn main() {
     let graph = Graph::from_file(args.file);
 
     let mut data = SharedData {
-        shortest_distance: (0..graph.num_nodes()).into_par_iter()
+        shortest_distance: (0..graph.num_nodes())
+            .into_par_iter()
             .map(|_| AtomicUsize::new(usize::MAX))
             .collect(),
         term_data: TerminationData::new(args.threads),
@@ -198,7 +191,8 @@ fn main() {
     for _ in 0..args.rounds {
         // initialization
         let pq = MultiQueue::new(args.threads);
-        data.shortest_distance = (0..graph.num_nodes()).into_par_iter()
+        data.shortest_distance = (0..graph.num_nodes())
+            .into_par_iter()
             .map(|_| AtomicUsize::new(usize::MAX))
             .collect();
         data.term_data = TerminationData::new(args.threads);

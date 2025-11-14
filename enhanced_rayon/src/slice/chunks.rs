@@ -25,10 +25,9 @@ use std::marker::PhantomData;
 // SOFTWARE.
 // ============================================================================
 
+use num_traits::PrimInt;
 use rayon::iter::plumbing::*;
 use rayon::iter::*;
-use num_traits::PrimInt;
-
 
 /// Parallel iterator over mutable non-overlapping chunks of a slice
 #[derive(Debug)]
@@ -111,8 +110,7 @@ where
     }
 
     fn split_at(self, index: usize) -> (Self, Self) {
-        let elem_index =
-            (self.offsets[index] - self.offsets[0]).to_usize().unwrap();
+        let elem_index = (self.offsets[index] - self.offsets[0]).to_usize().unwrap();
         let (left, right) = self.slice.split_at_mut(elem_index);
         (
             ChunksMutProducer {
@@ -127,14 +125,13 @@ where
     }
 }
 
-
 pub(super) struct ChunkSeqMut<'data, 'offs, T: 'data, O: PrimInt> {
     offsets: &'offs [O],
     ptr: *mut [T],
-    _marker: PhantomData<&'data mut T>
+    _marker: PhantomData<&'data mut T>,
 }
 
-impl <'data, 'offs, T, O: PrimInt> Iterator for ChunkSeqMut<'data, 'offs, T, O> {
+impl<'data, 'offs, T, O: PrimInt> Iterator for ChunkSeqMut<'data, 'offs, T, O> {
     type Item = &'data mut [T];
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -143,7 +140,7 @@ impl <'data, 'offs, T, O: PrimInt> Iterator for ChunkSeqMut<'data, 'offs, T, O> 
             1 => {
                 self.offsets = &self.offsets[1..];
                 Some(unsafe { &mut *self.ptr })
-            },
+            }
             _ => {
                 let size = (self.offsets[1] - self.offsets[0]).to_usize().unwrap();
                 self.offsets = &self.offsets[1..];
@@ -160,18 +157,18 @@ impl <'data, 'offs, T, O: PrimInt> Iterator for ChunkSeqMut<'data, 'offs, T, O> 
     }
 }
 
-impl <'data, 'offs, T, O> ExactSizeIterator for ChunkSeqMut<'data, 'offs, T, O>
+impl<'data, 'offs, T, O> ExactSizeIterator for ChunkSeqMut<'data, 'offs, T, O>
 where
-    O: PrimInt
+    O: PrimInt,
 {
     fn len(&self) -> usize {
         self.offsets.len()
     }
 }
 
-impl <'data, 'offs, T, O> DoubleEndedIterator for ChunkSeqMut<'data, 'offs, T, O>
+impl<'data, 'offs, T, O> DoubleEndedIterator for ChunkSeqMut<'data, 'offs, T, O>
 where
-    O: PrimInt
+    O: PrimInt,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         match self.offsets.len() {
@@ -179,11 +176,9 @@ where
             1 => {
                 self.offsets = &self.offsets[1..];
                 Some(unsafe { &mut *self.ptr })
-            },
+            }
             n => {
-                let skip = (
-                    self.offsets[n - 1] - self.offsets[0]
-                ).to_usize().unwrap();
+                let skip = (self.offsets[n - 1] - self.offsets[0]).to_usize().unwrap();
                 self.offsets = &self.offsets[..self.offsets.len() - 1];
                 let (left, right) = unsafe { (*self.ptr).split_at_mut(skip) };
                 self.ptr = left as *mut [T];
@@ -192,4 +187,3 @@ where
         }
     }
 }
-

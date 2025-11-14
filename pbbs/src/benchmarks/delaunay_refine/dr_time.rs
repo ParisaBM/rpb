@@ -25,18 +25,21 @@
 // SOFTWARE.
 // ============================================================================
 
-
 use std::time::Duration;
 
-#[path ="mod.rs"] mod dr;
-#[path ="../../misc.rs"] mod misc;
-#[path ="../macros.rs"] mod macros;
-#[path ="../../common/mod.rs"] mod common;
+#[path = "../../common/mod.rs"]
+mod common;
+#[path = "mod.rs"]
+mod dr;
+#[path = "../macros.rs"]
+mod macros;
+#[path = "../../misc.rs"]
+mod misc;
 
-use misc::*;
-use dr::incremental;
-use common::geometry::{Triangles, Point2d};
+use common::geometry::{Point2d, Triangles};
 use common::geometry_io::{read_triangles_from_file, write_triangles_to_file};
+use dr::incremental;
+use misc::*;
 
 type P = Point2d<f64>;
 
@@ -44,23 +47,24 @@ define_args!(Algs::INCREMENTAL);
 
 define_algs!((INCREMENTAL, "incremental"));
 
-pub fn run(
-    alg: Algs,
-    rounds: usize,
-    tris: &Triangles<P>
-) -> (Triangles<P>, Duration) {
+pub fn run(alg: Algs, rounds: usize, tris: &Triangles<P>) -> (Triangles<P>, Duration) {
     let f = match alg {
         Algs::INCREMENTAL => incremental::refine,
     };
 
-    let mut r = Triangles { p: vec![], t: vec![] };
+    let mut r = Triangles {
+        p: vec![],
+        t: vec![],
+    };
     let mean = time_loop(
         "dr",
         rounds,
         Duration::new(1, 0),
         || {},
-        || { f(tris, &mut r); },
-        || {}
+        || {
+            f(tris, &mut r);
+        },
+        || {},
     );
     (r, mean)
 }
@@ -71,6 +75,8 @@ fn main() {
     let tris = read_triangles_from_file(&args.ifname, 0);
     let (r, d) = run(args.algorithm, args.rounds, &tris);
 
-    if !args.ofname.is_empty() { write_triangles_to_file(&r, args.ofname); }
+    if !args.ofname.is_empty() {
+        write_triangles_to_file(&r, args.ofname);
+    }
     println!("{:?}", d);
 }

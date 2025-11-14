@@ -1,4 +1,3 @@
-
 // ============================================================================
 // This code is part of RPB.
 // ----------------------------------------------------------------------------
@@ -44,5 +43,4 @@ pub(crate) type DefAtomInt = std::sync::atomic::AtomicU32;
 pub(crate) type DefAtomIntS = std::sync::atomic::AtomicI32;
 
 #[allow(dead_code)]
-pub(crate) static ORDER: std::sync::atomic::Ordering
-    = std::sync::atomic::Ordering::Relaxed;
+pub(crate) static ORDER: std::sync::atomic::Ordering = std::sync::atomic::Ordering::Relaxed;

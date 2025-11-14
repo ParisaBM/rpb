@@ -25,9 +25,9 @@ use parlay::maybe_uninit_vec;
 // SOFTWARE.
 // ============================================================================
 
-use crate::{DefInt, DefIntS};
 use crate::graph::EdgeArray;
 use crate::union_find::UnionFind;
+use crate::{DefInt, DefIntS};
 
 pub fn spanning_forest(ea: &EdgeArray) -> Vec<DefInt> {
     let n = ea.num_rows;

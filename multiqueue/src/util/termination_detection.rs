@@ -25,8 +25,6 @@ use std::sync::atomic::{AtomicU32, Ordering::Relaxed};
 // SOFTWARE.
 // ============================================================================
 
-
-
 pub struct TerminationData {
     pub idle_count: AtomicU32,
     pub no_work_count: AtomicU32,
@@ -50,7 +48,9 @@ pub fn wait_to_terminate(data: &TerminationData) -> bool {
             data.idle_count.fetch_sub(1, Relaxed);
             return false;
         }
-        unsafe { core::arch::x86_64::_mm_pause(); }
+        unsafe {
+            core::arch::x86_64::_mm_pause();
+        }
         idle_count = data.idle_count.load(Relaxed);
     }
     true
@@ -58,7 +58,7 @@ pub fn wait_to_terminate(data: &TerminationData) -> bool {
 
 pub fn try_do<F, RT>(f: &F, data: &TerminationData) -> Result<RT, ()>
 where
-    F: Fn() -> Result<RT, ()>
+    F: Fn() -> Result<RT, ()>,
 {
     if let Ok(result) = f() {
         return Ok(result);
@@ -69,9 +69,9 @@ where
                 data.no_work_count.fetch_sub(1, Relaxed);
                 return Ok(result);
             }
-            if num_no_work == data.num_threads as u32
-                && wait_to_terminate(data)
-            { return Err(()); }
+            if num_no_work == data.num_threads as u32 && wait_to_terminate(data) {
+                return Err(());
+            }
             num_no_work = data.no_work_count.load(Relaxed);
         }
     }

@@ -24,7 +24,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // ============================================================================
-
 #[cfg(not(feature = "mem_safe"))]
 macro_rules! maybe_uninit_vec {
     ($elem:expr; $n:expr) => {
@@ -42,13 +41,12 @@ macro_rules! maybe_uninit_vec {
 #[cfg(feature = "mem_safe")]
 macro_rules! maybe_uninit_vec { ($($tokens:tt)*) => { vec!($($tokens)*) }; }
 
-
 #[macro_export]
 macro_rules! make_mut {
-    ($immut_ref: expr, $t: ty)
-        => {($immut_ref as *const $t as *mut $t).as_mut()};
+    ($immut_ref: expr, $t: ty) => {
+        ($immut_ref as *const $t as *mut $t).as_mut()
+    };
 }
-
 
 #[macro_export]
 macro_rules! verbose_println {

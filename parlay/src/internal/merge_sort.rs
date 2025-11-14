@@ -31,19 +31,17 @@ use crate::internal::quick_sort::insertion_sort;
 
 const MERGE_SORT_BASE: usize = 48;
 
-pub(crate) fn merge_sort_<T, F>(
-    inp: &mut [T],
-    out: &mut [T],
-    less: F,
-    inplace: bool
-) where
+pub(crate) fn merge_sort_<T, F>(inp: &mut [T], out: &mut [T], less: F, inplace: bool)
+where
     T: Copy + Send + Sync,
     F: Fn(T, T) -> bool + Clone + Send,
 {
     let n = inp.len();
     if n < MERGE_SORT_BASE {
         insertion_sort(inp, less);
-        if !inplace { out.iter_mut().zip(inp.iter()).for_each(|(o, i)| *o = *i); }
+        if !inplace {
+            out.iter_mut().zip(inp.iter()).for_each(|(o, i)| *o = *i);
+        }
     } else {
         let m = n / 2;
         let (l_inp, r_inp) = inp.split_at_mut(m);
@@ -51,8 +49,12 @@ pub(crate) fn merge_sort_<T, F>(
         let (cmp_clone_1, cmp_clone_2) = (less.clone(), less.clone());
         let l = || merge_sort_(l_inp, l_out, cmp_clone_1, !inplace);
         let r = || merge_sort_(r_inp, r_out, cmp_clone_2, !inplace);
-        if n > 64 { rayon::join(l, r); }
-        else { l(); r(); }
+        if n > 64 {
+            rayon::join(l, r);
+        } else {
+            l();
+            r();
+        }
 
         if inplace {
             merge_into(&out[0..m], &out[m..n], inp, less);
@@ -68,8 +70,9 @@ where
     F: Fn(T, T) -> bool + Clone + Send,
 {
     let n = inp.len();
-    if n < MERGE_SORT_BASE { insertion_sort(inp, less);}
-    else {
+    if n < MERGE_SORT_BASE {
+        insertion_sort(inp, less);
+    } else {
         let mut out = maybe_uninit_vec![inp[0]; n];
         merge_sort_(inp, &mut out, less, true);
     }

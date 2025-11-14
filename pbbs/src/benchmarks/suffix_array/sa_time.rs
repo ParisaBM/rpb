@@ -1,4 +1,3 @@
-
 // ============================================================================
 // This code is part of RPB.
 // ----------------------------------------------------------------------------
@@ -25,30 +24,30 @@
 // SOFTWARE.
 // ============================================================================
 
-use std::time::Duration;
 use rayon::prelude::*;
+use std::time::Duration;
 
-#[path ="mod.rs"] mod sa;
-#[path ="../../misc.rs"] mod misc;
-#[path ="../macros.rs"] mod macros;
-#[path ="../../common/io.rs"] mod io;
-#[path ="../../algorithm/suffix_array.rs"] mod suffix_array;
+#[path = "../../common/io.rs"]
+mod io;
+#[path = "../macros.rs"]
+mod macros;
+#[path = "../../misc.rs"]
+mod misc;
+#[path = "mod.rs"]
+mod sa;
+#[path = "../../algorithm/suffix_array.rs"]
+mod suffix_array;
 
+use io::{chars_from_file, write_slice_to_file_seq};
 use misc::*;
 use sa::parallel_range;
-use io::{chars_from_file, write_slice_to_file_seq};
 
 define_args!(Algs::ParRange);
 define_algs!((ParRange, "par-range"));
 
-pub fn run(
-    alg: Algs,
-    rounds: usize,
-    inp: &[DefChar]
-) -> (Vec<DefInt>, Duration)
-{
+pub fn run(alg: Algs, rounds: usize, inp: &[DefChar]) -> (Vec<DefInt>, Duration) {
     let f = match alg {
-        Algs::ParRange => {parallel_range::suffix_array},
+        Algs::ParRange => parallel_range::suffix_array,
     };
 
     #[cfg(not(feature = "AW_safe"))]
@@ -67,8 +66,10 @@ pub fn run(
         rounds,
         Duration::new(1, 0),
         || {},
-        || { f(&inp, &mut r); },
-        || {}
+        || {
+            f(&inp, &mut r);
+        },
+        || {},
     );
     #[cfg(feature = "AW_safe")]
     let r: Vec<_> = r.into_par_iter().map(|ri| ri.load(ORDER)).collect();
@@ -81,10 +82,5 @@ fn main() {
     let arr = chars_from_file(&args.ifname, false).unwrap();
     let (r, d) = run(args.algorithm, args.rounds, &arr);
 
-    finalize!(
-        args,
-        r,
-        d,
-        write_slice_to_file_seq(&r, args.ofname)
-    );
+    finalize!(args, r, d, write_slice_to_file_seq(&r, args.ofname));
 }

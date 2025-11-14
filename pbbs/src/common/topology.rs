@@ -1,4 +1,3 @@
-
 // ============================================================================
 // This code is part of RPB.
 // ----------------------------------------------------------------------------
@@ -27,9 +26,8 @@
 
 use std::default::Default;
 
-use crate::common::geometry::{Point2d, in_circle, counter_clock_wise, angle};
+use crate::common::geometry::{angle, counter_clock_wise, in_circle, Point2d};
 use parlay::make_mut;
-
 
 type Tri<'a> = Triangle<'a>;
 type Vtx<'a> = Vertex<'a>;
@@ -59,13 +57,24 @@ pub struct SimpleX<'a> {
     pub t: Option<&'a Tri<'a>>,
 }
 
-
 #[inline(always)]
-fn mod3(i: i32) -> i32 { if i > 2 { i-3 } else { i } }
+fn mod3(i: i32) -> i32 {
+    if i > 2 {
+        i - 3
+    } else {
+        i
+    }
+}
 
 impl<'a> Vertex<'a> {
     pub fn new(p: Point2d<f64>, i: usize) -> Self {
-        Self { pt: p, id: i as i32, reserve: -1, t: None, bad_t: None }
+        Self {
+            pt: p,
+            id: i as i32,
+            reserve: -1,
+            t: None,
+            bad_t: None,
+        }
     }
 
     pub fn print(&self) {
@@ -75,18 +84,21 @@ impl<'a> Vertex<'a> {
 
 impl<'a> Default for Vertex<'a> {
     fn default() -> Self {
-        Self { pt: Point2d::default(), id: 0, reserve: -1, t: None, bad_t: None }
+        Self {
+            pt: Point2d::default(),
+            id: 0,
+            reserve: -1,
+            t: None,
+            bad_t: None,
+        }
     }
 }
 
 impl<'a> Triangle<'a> {
-    pub fn set_t(
-        &mut self,
-        t1: Option<&'a Tri>,
-        t2: Option<&'a Tri>,
-        t3: Option<&'a Tri>
-    ) {
-        self.ngh[0] = t1; self.ngh[1] = t2; self.ngh[2] = t3;
+    pub fn set_t(&mut self, t1: Option<&'a Tri>, t2: Option<&'a Tri>, t3: Option<&'a Tri>) {
+        self.ngh[0] = t1;
+        self.ngh[1] = t2;
+        self.ngh[2] = t3;
     }
 
     pub fn set_v(&mut self, v1: &'a Vtx, v2: &'a Vtx, v3: &'a Vtx) {
@@ -108,7 +120,7 @@ impl<'a> Triangle<'a> {
 
     pub fn update(&mut self, t: &Tri, tn: &'a Tri) {
         for i in 0..3 {
-            if let Some(ngh) = self.ngh[i]{
+            if let Some(ngh) = self.ngh[i] {
                 if ngh as *const Tri == t as *const Tri {
                     self.ngh[i] = Some(tn);
                     return;
@@ -124,7 +136,7 @@ pub static NULL_TRI: Triangle = Triangle {
     vtx: [None, None, None],
     ngh: [None, None, None],
     initialized: false,
-    bad: 0
+    bad: 0,
 };
 
 impl<'a> Default for Triangle<'a> {
@@ -134,15 +146,18 @@ impl<'a> Default for Triangle<'a> {
             vtx: [None, None, None],
             ngh: [None, None, None],
             initialized: false,
-            bad: 0
+            bad: 0,
         }
     }
 }
 
-impl<'a> SimpleX<'a>
-{
+impl<'a> SimpleX<'a> {
     pub fn new(t: &'a Tri, o: i32) -> Self {
-        Self { o, boundary: false, t: Some(t) }
+        Self {
+            o,
+            boundary: false,
+            t: Some(t),
+        }
     }
 
     pub fn new_from_vtx(_v1: &Vtx, _v2: &Vtx, _v3: &Vtx, _t: &'a Tri) {
@@ -154,12 +169,18 @@ impl<'a> SimpleX<'a>
         self
     }
 
-    pub fn valid(&self)       -> bool { !self.boundary }
-    pub fn is_triangle(&self) -> bool { !self.boundary }
-    pub fn is_boundary(&self) -> bool { self.boundary }
+    pub fn valid(&self) -> bool {
+        !self.boundary
+    }
+    pub fn is_triangle(&self) -> bool {
+        !self.boundary
+    }
+    pub fn is_boundary(&self) -> bool {
+        self.boundary
+    }
 
     pub fn rotate(&self) -> Self {
-        Self::new(self.t.unwrap(), mod3(self.o+1))
+        Self::new(self.t.unwrap(), mod3(self.o + 1))
     }
 
     pub fn across(&self) -> Self {
@@ -185,7 +206,7 @@ impl<'a> SimpleX<'a>
                 tv[0].unwrap().pt,
                 tv[1].unwrap().pt,
                 tv[2].unwrap().pt,
-                v.pt
+                v.pt,
             )
         }
     }
@@ -193,9 +214,9 @@ impl<'a> SimpleX<'a>
     pub fn far_angle(&self) -> f64 {
         let tv = &self.t.unwrap().vtx;
         angle(
-            tv[mod3(self.o+1) as usize].unwrap().pt,
+            tv[mod3(self.o + 1) as usize].unwrap().pt,
             tv[self.o as usize].unwrap().pt,
-            tv[mod3(self.o+2) as usize].unwrap().pt
+            tv[mod3(self.o + 2) as usize].unwrap().pt,
         )
     }
 
@@ -206,7 +227,8 @@ impl<'a> SimpleX<'a>
             let tv = &self.t.unwrap().vtx;
             counter_clock_wise(
                 tv[mod3(self.o + 2) as usize].unwrap().pt,
-                v.pt, tv[self.o as usize].unwrap().pt
+                v.pt,
+                tv[self.o as usize].unwrap().pt,
             )
         }
     }
@@ -215,8 +237,8 @@ impl<'a> SimpleX<'a>
         let s = self.across();
         let st = s.t.unwrap();
         let t = self.t.unwrap();
-        let os1 = mod3(s.o+1) as usize;
-        let o1 = mod3(self.o+1) as usize;
+        let os1 = mod3(s.o + 1) as usize;
+        let o1 = mod3(self.o + 1) as usize;
 
         // JA: Let's do it all unsafely.
         let t1 = t.ngh[o1];
@@ -247,14 +269,12 @@ impl<'a> SimpleX<'a>
 
     pub fn split(&self, v: &'a Vtx, ta0: &'a Tri, ta1: &'a Tri) {
         let t = self.t.unwrap();
-        unsafe { make_mut!(v, Vtx).unwrap().t = self.t; }
+        unsafe {
+            make_mut!(v, Vtx).unwrap().t = self.t;
+        }
 
         let (_t1, t2, t3) = (t.ngh[0], t.ngh[1], t.ngh[2]);
-        let (v1, v2, v3) = (
-            t.vtx[0].unwrap(),
-            t.vtx[1].unwrap(),
-            t.vtx[2].unwrap()
-        );
+        let (v1, v2, v3) = (t.vtx[0].unwrap(), t.vtx[1].unwrap(), t.vtx[2].unwrap());
 
         unsafe {
             let t = make_mut!(t, Tri).unwrap();
@@ -270,20 +290,26 @@ impl<'a> SimpleX<'a>
             ta1.set_t(t3, Some(t), Some(ta0));
             ta1.set_v(v3, v, v2);
 
-            if let Some(t2) = t2 { make_mut!(t2, Tri).unwrap().update(t, ta0) }
-            if let Some(t3) = t3 { make_mut!(t3, Tri).unwrap().update(t, ta1) }
+            if let Some(t2) = t2 {
+                make_mut!(t2, Tri).unwrap().update(t, ta0)
+            }
+            if let Some(t3) = t3 {
+                make_mut!(t3, Tri).unwrap().update(t, ta1)
+            }
             make_mut!(v2, Vtx).unwrap().t = Some(ta0);
         }
     }
 
     pub fn split_boundary(&self, v: &Vtx, ta: &Tri) {
-        let o1 = mod3(self.o+1) as usize;
-        let o2 = mod3(self.o+2) as usize;
+        let o1 = mod3(self.o + 1) as usize;
+        let o2 = mod3(self.o + 2) as usize;
         let t = self.t.unwrap();
         if let Some(_) = t.ngh[self.o as usize] {
             panic!("simplex::splitBoundary: not boundary");
         }
-        unsafe { make_mut!(v, Vtx).unwrap().t = self.t; }
+        unsafe {
+            make_mut!(v, Vtx).unwrap().t = self.t;
+        }
         let t2 = t.ngh[o2];
         let (v1, v2) = (t.vtx[o1].unwrap(), t.vtx[o2].unwrap());
 
@@ -292,8 +318,11 @@ impl<'a> SimpleX<'a>
             t.ngh[o2] = Some(ta);
             t.vtx[o2] = Some(v);
             let ta = make_mut!(ta, Tri).unwrap();
-            ta.set_t(t2, None, Some(t)); ta.set_v(v2, v, v1);
-            if let Some(t2) = t2 { make_mut!(t2, Tri).unwrap().update(t, ta); }
+            ta.set_t(t2, None, Some(t));
+            ta.set_v(v2, v, v1);
+            if let Some(t2) = t2 {
+                make_mut!(t2, Tri).unwrap().update(t, ta);
+            }
             make_mut!(v2, Vtx).unwrap().t = self.t;
         }
     }
@@ -303,21 +332,29 @@ impl<'a> SimpleX<'a>
         if let Some(_) = t.ngh[self.o as usize] {
             panic!("simplex::extend: not boundary");
         }
-        unsafe { make_mut!(t, Tri).unwrap().ngh[self.o as usize] = Some(ta); }
+        unsafe {
+            make_mut!(t, Tri).unwrap().ngh[self.o as usize] = Some(ta);
+        }
         ta.set_v(
             t.vtx[self.o as usize].unwrap(),
-            t.vtx[mod3(self.o+2) as usize].unwrap(),
-            v
+            t.vtx[mod3(self.o + 2) as usize].unwrap(),
+            v,
         );
         ta.set_t(None, self.t, None);
-        unsafe { make_mut!(v, Vtx).unwrap().t = Some(ta); }
+        unsafe {
+            make_mut!(v, Vtx).unwrap().t = Some(ta);
+        }
         Self::new(ta, 0)
     }
 }
 
 impl<'a> Default for SimpleX<'a> {
     fn default() -> Self {
-        Self { o: 0, boundary: false, t: None }
+        Self {
+            o: 0,
+            boundary: false,
+            t: None,
+        }
     }
 }
 
@@ -326,10 +363,14 @@ impl<'a> SimpleX<'a> {
         if let Some(t) = self.t {
             print!("vtxs=");
             for i in 0..3 {
-                if let Some(v) = t.vtx[mod3(i+self.o) as usize] {
+                if let Some(v) = t.vtx[mod3(i + self.o) as usize] {
                     println!("{}({},{}) ", v.id, v.pt.x, v.pt.y);
-                } else { println!("NULL ") }
+                } else {
+                    println!("NULL ")
+                }
             }
-        } else { println!("NULL simp"); }
+        } else {
+            println!("NULL simp");
+        }
     }
 }

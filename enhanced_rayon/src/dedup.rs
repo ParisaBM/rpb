@@ -30,14 +30,14 @@ use rayon::prelude::*;
 
 #[allow(dead_code)]
 pub(super) fn serial<T: PrimInt>(offsets: &[T], len: usize) {
-    let mut table: Vec<bool> = (0..len)
-        .into_par_iter()
-        .map(|_| false)
-        .collect();
+    let mut table: Vec<bool> = (0..len).into_par_iter().map(|_| false).collect();
 
-    offsets.into_iter().for_each( |x| {
-        if table[x.to_usize().unwrap()] { panic!("Duplicate offset"); }
-        else { table[x.to_usize().unwrap()] = true; }
+    offsets.into_iter().for_each(|x| {
+        if table[x.to_usize().unwrap()] {
+            panic!("Duplicate offset");
+        } else {
+            table[x.to_usize().unwrap()] = true;
+        }
     });
 }
 
@@ -48,32 +48,26 @@ pub(super) fn parallel<T: PrimInt + Sync>(offsets: &[T], len: usize) {
         .map(|_| AtomicBool::new(false))
         .collect();
 
-    offsets.into_par_iter().for_each( |x| {
-        table[x.to_usize().unwrap()].compare_exchange(
-            false,
-            true,
-            Ordering::SeqCst,
-            Ordering::SeqCst,
-        ).unwrap();
+    offsets.into_par_iter().for_each(|x| {
+        table[x.to_usize().unwrap()]
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .unwrap();
     });
 }
 
 #[allow(dead_code)]
 pub(super) fn parallel_by<F>(offset: F, off_len: usize, len: usize)
 where
-    F: Fn(usize) -> usize + Sync + Clone
+    F: Fn(usize) -> usize + Sync + Clone,
 {
     let table: Vec<AtomicBool> = (0..len)
         .into_par_iter()
         .map(|_| AtomicBool::new(false))
         .collect();
 
-    (0..off_len).into_par_iter().for_each( |i| {
-        table[(offset)(i)].compare_exchange(
-            false,
-            true,
-            Ordering::SeqCst,
-            Ordering::SeqCst,
-        ).unwrap();
+    (0..off_len).into_par_iter().for_each(|i| {
+        table[(offset)(i)]
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .unwrap();
     });
 }
