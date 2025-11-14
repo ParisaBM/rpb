@@ -28,13 +28,15 @@ use std::fs;
 use num_traits::Float;
 use rayon::prelude::*;
 use rayon::str::ParallelString;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
 use crate::common::geometry::*;
 use crate::common::io::read_file_to_vec;
 
 const HEADER_TRI: &str = "pbbs_triangles";
+const HEADER_POINT2D: &str = "pbbs_sequencePoint2d";
+const HEADER_POINT3D: &str = "pbbs_sequencePoint3d";
 
 pub fn read_points2d_from_file<T>(fname: &str) -> Vec<Point2d<T>>
 where
@@ -44,7 +46,7 @@ where
     read_file_to_vec(
         fname,
         Some {
-            0: |w: &[&str]| debug_assert_eq!(w[0], "pbbs_sequencePoint2d"),
+            0: |w: &[&str]| debug_assert_eq!(w[0], HEADER_POINT2D),
         },
     )
 }
@@ -57,7 +59,7 @@ where
     read_file_to_vec(
         fname,
         Some {
-            0: |w: &[&str]| debug_assert_eq!(w[0], "pbbs_sequencePoint3d"),
+            0: |w: &[&str]| debug_assert_eq!(w[0], HEADER_POINT3D),
         },
     )
 }
@@ -104,6 +106,26 @@ where
     debug_assert_eq!(tris.len(), m);
 
     Triangles::new(pnts, tris)
+}
+
+pub fn write_points3d_to_file<T, F>(pts: &Vec<Point3d<T>>, fname: F)
+where
+    T: Float + FromStr + Send + Sync + Display,
+    <T as std::str::FromStr>::Err: Debug,
+    F: AsRef<std::path::Path>,
+{
+    fs::write(
+        fname,
+        format!(
+            "{}\n{}",
+            HEADER_POINT3D,
+            pts.par_iter()
+                .map(|p| format!("{} {} {}", p[0], p[1], p[2]))
+                .collect::<Vec<_>>()
+                .join("\n")
+        ),
+    )
+    .expect("cannot write output");
 }
 
 pub fn write_triangles_to_file<P, F>(tris: &Triangles<P>, fname: F)

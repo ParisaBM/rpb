@@ -190,11 +190,15 @@ impl Debug for ParsePoint2dError {
 
 pub type Vector3d<T> = Point3d<T>;
 
-#[derive(Copy, Clone)]
-pub struct Point3d<T> {
-    pub x: T,
-    pub y: T,
-    pub z: T,
+#[derive(Copy, Clone, Debug)]
+pub struct Point3d<T>([T; 3]);
+
+impl<T> Index<usize> for Point3d<T> {
+    type Output = T;
+
+    fn index(&self, idx: usize) -> &T {
+        &self.0[idx]
+    }
 }
 
 impl<T: Float> PointToVec for Point3d<T> {
@@ -203,21 +207,21 @@ impl<T: Float> PointToVec for Point3d<T> {
 
 impl<T: Float> Point3d<T> {
     pub fn new(x: T, y: T, z: T) -> Self {
-        Self { x, y, z }
+        Self([x, y, z])
     }
 
     // Returns the vector result of the cross product
     pub fn cross(self, other: Self) -> Self {
-        Self {
-            x: self.y * other.z - self.z * other.y,
-            y: self.z * other.x - self.x * other.z,
-            z: self.x * other.y - self.y * other.x,
-        }
+        Self::new(
+            self[1] * other[2] - self[2] * other[1],
+            self[2] * other[0] - self[0] * other[2],
+            self[0] * other[1] - self[1] * other[0],
+        )
     }
 
     // Returns the scalar result of the dot product
     pub fn dot(self, other: Self) -> T {
-        return self.x * other.x + self.y * other.y + self.z * other.z;
+        return self[0] * other[0] + self[1] * other[1] + self[2] * other[2];
     }
 }
 
@@ -225,11 +229,7 @@ impl<T: Float> Add<Vector3d<T>> for Point3d<T> {
     type Output = Self;
 
     fn add(self, other: Vector3d<T>) -> Self {
-        Self {
-            x: self.x + other.x,
-            y: self.y + other.y,
-            z: self.z + other.z,
-        }
+        Self::new(self[0] + other[0], self[1] + other[1], self[2] + other[2])
     }
 }
 
@@ -237,11 +237,7 @@ impl<T: Float> Sub for Point3d<T> {
     type Output = Vector3d<T>;
 
     fn sub(self, other: Self) -> Self {
-        Self {
-            x: self.x - other.x,
-            y: self.y - other.y,
-            z: self.z - other.z,
-        }
+        Self::new(self[0] - other[0], self[1] - other[1], self[2] - other[2])
     }
 }
 
@@ -249,11 +245,7 @@ impl<T: Float> Mul<T> for Vector3d<T> {
     type Output = Self;
 
     fn mul(self, other: T) -> Self {
-        Self {
-            x: self.x * other,
-            y: self.y * other,
-            z: self.z * other,
-        }
+        Self::new(self[0] * other, self[1] * other, self[2] * other)
     }
 }
 
@@ -298,7 +290,7 @@ impl Debug for ParsePoint3dError {
 
 impl<T: Float + Display> Display for Point3d<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {} {}", self.x, self.y, self.z)
+        write!(f, "{} {} {}", self[0], self[1], self[2])
     }
 }
 

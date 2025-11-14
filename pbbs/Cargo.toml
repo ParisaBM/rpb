@@ -98,3 +98,9 @@ test    = false
 name    = "dr"
 path    = "src/benchmarks/delaunay_refine/dr_time.rs"
 test    = false
+
+# nBody
+[[bin]]
+name    = "nbody"
+path    = "src/benchmarks/nbody/nbody_time.rs"
+test    = false
