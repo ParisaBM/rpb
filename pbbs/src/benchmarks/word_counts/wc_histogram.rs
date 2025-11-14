@@ -49,9 +49,13 @@ pub fn word_counts(s: &Vec<char>, result: &mut Vec<ResultType>) {
     histogram_by_key(&tokens, djb2_hash, &mut word_map);
     t.next("count by key");
 
-    for (token, count) in word_map {
-        let token_str: String = token.iter().collect();
-        result.push((token_str, count));
-    }
+    let output: Vec<ResultType> = word_map
+        .par_iter()
+        .map(|(token, count)| -> ResultType {
+            let token_str: String = token.iter().collect();
+            (token_str, *count)
+        })
+        .collect();
+    *result = output;
     t.next("extract results");
 }

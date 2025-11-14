@@ -270,19 +270,23 @@ where
     let (offsets, sum) = block_delayed_scan(&start_tokens, g, (0, 0));
 
     // (index, offsets)
-    let z = (0..=n).zip(offsets);
+    let z = (0..n + 1).into_par_iter().zip(offsets.par_iter());
 
     // vector of slice of chars to mimic vector of strings
-    let mut results: Vec<R> = vec![R::default(); sum.0 as usize];
+    let results: Vec<R> = z
+        .into_par_iter()
+        .filter_map(|(index, offset)| -> Option<R> {
+            let last_start = offset.1 as usize;
+            if is_end(index) {
+                Some(f(&r[last_start..index]))
+            } else {
+                None
+            }
+        })
+        .collect();
 
-    for (index, offset) in z {
-        let token_count = offset.0 as usize;
-        let last_start = offset.1 as usize;
-
-        if is_end(index) {
-            results[token_count - 1] = f(&r[last_start..index]);
-        }
-    }
+    // should have matching length
+    assert!(results.len() == sum.0 as usize);
 
     results
 }
