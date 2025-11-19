@@ -36,12 +36,12 @@ mod macros;
 #[path = "../../misc.rs"]
 mod misc;
 
-use common::geometry::{Point2d, Triangles};
+use common::geometry::{Point, Triangles};
 use common::geometry_io::{read_triangles_from_file, write_triangles_to_file};
 use dr::incremental;
 use misc::*;
 
-type P = Point2d<f64>;
+type P = Point<2, f64>;
 
 define_args!(Algs::INCREMENTAL);
 
