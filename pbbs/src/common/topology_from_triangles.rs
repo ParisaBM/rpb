@@ -30,7 +30,7 @@ use std::marker::PhantomData;
 
 use crate::common::{
     atomics::atomic_cas,
-    geometry::{Point2d, Triangles},
+    geometry::{Point, Triangles},
     topology::{Triangle, Vertex, NULL_TRI},
 };
 use parlay::hash_table::*;
@@ -97,7 +97,7 @@ type EdgeTable<'a> = HashTable<HashEdges<'a>>;
 
 #[allow(mismatched_lifetime_syntaxes)]
 pub fn topology_from_triangles(
-    tris: &Triangles<Point2d<f64>>,
+    tris: &Triangles<Point<2, f64>>,
     extra_points: usize,
 ) -> (Vec<Tri>, Vec<Vtx>) {
     let (n, m) = (tris.num_points(), tris.num_triangles());

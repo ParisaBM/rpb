@@ -36,7 +36,7 @@ use parlay::primitives::{nc_pack, pack, pack_index};
 use parlay::utilities::hash64;
 use parlay::{make_mut, Timer};
 
-type P = Point2d<f64>;
+type P = Point<2, f64>;
 type Tri<'a> = Triangle<'a>;
 type Vtx<'a> = Vertex<'a>;
 type Spx<'a> = SimpleX<'a>;
@@ -407,7 +407,7 @@ fn refine_internal(tris: &Triangles<P>, dest: &mut Triangles<P>) {
         .into_par_iter()
         .enumerate()
         .for_each(|(i, (vsi, vi))| {
-            *vi = Vtx::new(Point2d::default(), i + n);
+            *vi = Vtx::new(Point::default(), i + n);
             vi.t = Some(&triangles[m + 2 * i]);
             unsafe { *vsi = (vi as *mut Vtx).as_mut().unwrap() };
         });
