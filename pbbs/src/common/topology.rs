@@ -26,7 +26,7 @@
 
 use std::default::Default;
 
-use crate::common::geometry::{angle, counter_clock_wise, in_circle, Point2d};
+use crate::common::geometry::{angle, counter_clock_wise, in_circle, Point};
 use parlay::make_mut;
 
 type Tri<'a> = Triangle<'a>;
@@ -34,7 +34,7 @@ type Vtx<'a> = Vertex<'a>;
 
 #[derive(Clone, Copy)]
 pub struct Vertex<'a> {
-    pub pt: Point2d<f64>,
+    pub pt: Point<2, f64>,
     pub id: i32,
     pub reserve: i32,
     pub t: Option<&'a Tri<'a>>,
@@ -67,7 +67,7 @@ fn mod3(i: i32) -> i32 {
 }
 
 impl<'a> Vertex<'a> {
-    pub fn new(p: Point2d<f64>, i: usize) -> Self {
+    pub fn new(p: Point<2, f64>, i: usize) -> Self {
         Self {
             pt: p,
             id: i as i32,
@@ -78,14 +78,14 @@ impl<'a> Vertex<'a> {
     }
 
     pub fn print(&self) {
-        println!("{}({},{})", self.id, self.pt.x, self.pt.y);
+        println!("{}({},{})", self.id, self.pt[0], self.pt[1]);
     }
 }
 
 impl<'a> Default for Vertex<'a> {
     fn default() -> Self {
         Self {
-            pt: Point2d::default(),
+            pt: Point::default(),
             id: 0,
             reserve: -1,
             t: None,
@@ -364,7 +364,7 @@ impl<'a> SimpleX<'a> {
             print!("vtxs=");
             for i in 0..3 {
                 if let Some(v) = t.vtx[mod3(i + self.o) as usize] {
-                    println!("{}({},{}) ", v.id, v.pt.x, v.pt.y);
+                    println!("{}({},{}) ", v.id, v.pt[0], v.pt[1]);
                 } else {
                     println!("NULL ")
                 }
