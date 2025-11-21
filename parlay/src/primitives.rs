@@ -208,3 +208,85 @@ where
     let ref_arr: Vec<_> = arr.iter().map(|a| a).collect();
     flatten(&ref_arr, dest);
 }
+
+/* -------------------- Tokens -------------------- */
+
+pub fn tokens<'a, T, G>(r: &'a Vec<T>, is_space: G) -> Vec<&'a [T]>
+where
+    T: Copy + Send + Sync + Default,
+    G: Fn(&T) -> bool + Copy + Send + Sync + Sized,
+{
+    let to_tokens = |word: &'a [T]| word;
+    return map_tokens(&r, to_tokens, is_space);
+}
+
+pub fn map_tokens<'a, T, F, G, R>(r: &'a Vec<T>, f: F, is_space: G) -> Vec<R>
+where
+    T: Copy + Send + Sync + Default,
+    F: Fn(&'a [T]) -> R + Copy + Send + Sync + Sized,
+    G: Fn(&T) -> bool + Copy + Send + Sync + Sized,
+    R: Copy + Send + Sync + Default,
+{
+    type Ipair = (i64, i64);
+    let n = r.len() - 1;
+
+    if n == 0 {
+        return vec![];
+    }
+
+    let is_start =
+        |i: usize| -> bool { (i == 0 || is_space(&r[i - 1])) && (i != n) && !is_space(&r[i]) };
+    let is_end =
+        |i: usize| -> bool { (i == n || is_space(&r[i])) && (i != 0) && !is_space(&r[i - 1]) };
+
+    // ipair: first = # of tokens so far, second = index of last start
+    // g: given 2 ipair, a and b, check if b is a new start
+    // if b is a new start, number of tokens ++, set the last seen start to b index
+    let g = |a: Ipair, b: Ipair| -> Ipair {
+        if b.0 == 0 {
+            a
+        } else {
+            (a.0 + b.0, b.1)
+        }
+    };
+
+    // vector storing where the token starts
+    let start_tokens: Vec<Ipair> = (0..=n)
+        .into_par_iter()
+        .map(|i: usize| -> Ipair {
+            if is_start(i) {
+                (1, i as i64)
+            }
+            // this is a start
+            else {
+                (0, 0)
+            } // not a start
+        })
+        .collect();
+
+    // offsets.0: cumulative count of # token starts up to (and excluding) char i
+    // offsets.1: last start up to (and excluding) char i
+    // sum.0 = total number of tokens, sum.1: last token start
+    let (offsets, sum) = block_delayed_scan(&start_tokens, g, (0, 0));
+
+    // (index, offsets)
+    let z = (0..n + 1).into_par_iter().zip(offsets.par_iter());
+
+    // vector of slice of chars to mimic vector of strings
+    let results: Vec<R> = z
+        .into_par_iter()
+        .filter_map(|(index, offset)| -> Option<R> {
+            let last_start = offset.1 as usize;
+            if is_end(index) {
+                Some(f(&r[last_start..index]))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    // should have matching length
+    assert!(results.len() == sum.0 as usize);
+
+    results
+}
