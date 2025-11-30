@@ -110,3 +110,9 @@ test    = false
 name    = "index"
 path    = "src/benchmarks/inverted_index/index_time.rs"
 test    = false
+
+# NearestNeighbor
+[[bin]]
+name    = "knn"
+path    = "src/benchmarks/nearest_neighbor/knn_time.rs"
+test    = false
