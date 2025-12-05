@@ -184,7 +184,7 @@ where
 
 pub fn flatten<T>(arr: &[&Vec<T>], dest: &mut Vec<T>)
 where
-    T: Copy + Send + Sync + Default,
+    T: Clone + Send + Sync + Default,
 {
     let n = arr.len();
     let mut offsets: Vec<_> = (0..n).into_par_iter().map(|i| arr[i].len()).collect();
@@ -197,13 +197,13 @@ where
             (*a, out_chunk)
                 .into_par_iter()
                 .with_gran(1024)
-                .for_each(|(ai, oi)| *oi = *ai);
+                .for_each(|(ai, oi)| *oi = ai.clone());
         });
 }
 
 pub fn flatten_by_val<T>(arr: &[Vec<T>], dest: &mut Vec<T>)
 where
-    T: Copy + Send + Sync + Default,
+    T: Clone + Send + Sync + Default,
 {
     let ref_arr: Vec<_> = arr.iter().map(|a| a).collect();
     flatten(&ref_arr, dest);
@@ -228,7 +228,7 @@ where
     R: Copy + Send + Sync + Default,
 {
     type Ipair = (i64, i64);
-    let n = r.len() - 1;
+    let n = r.len();
 
     if n == 0 {
         return vec![];
