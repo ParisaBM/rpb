@@ -14,13 +14,16 @@ use index::index_serial;
 use io::{chars_from_file, chars_to_file};
 use misc::*;
 
+use crate::index::index_parallel;
+
 define_args!(Algs::Serial);
 
-define_algs!((Serial, "serial"));
+define_algs!((Serial, "serial"), (Parallel, "parallel"));
 
 pub fn run(alg: Algs, s: &[DefChar], start: &str, rounds: usize) -> (Vec<char>, Duration) {
     let f = match alg {
         Algs::Serial => index_serial::build_index,
+        Algs::Parallel => index_parallel::build_index,
     };
 
     // convert u8 (DefChar) to char type

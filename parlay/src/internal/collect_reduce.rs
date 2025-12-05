@@ -318,7 +318,7 @@ pub trait RCSHashEq {
 pub fn seq_collect_reduce_sparse<T, R, HEQ>(inp: &[T], helper: HEQ, res: &mut Vec<R>)
 where
     T: Send + Sync + Clone + Copy + Default,
-    R: Send + Sync + Clone + Copy + Default,
+    R: Send + Sync + Clone + Default,
     HEQ: RCSHashEq<IT = T, RT = R> + HashEq<IT = T, RT = R> + Send + Sync,
     <HEQ as HashEq>::KT: Copy + Default + Send + Sync,
     <HEQ as RCSHashEq>::KT: Copy + Default + Send + Sync,
@@ -332,7 +332,7 @@ where
     for j in 0..inp.len() {
         let key = helper.get_key(inp[j]);
         let mut k: usize = helper.hash(key) % table_size;
-        while flags[k] && !helper.equal(helper.get_key_from_result(table[k]), key) {
+        while flags[k] && !helper.equal(helper.get_key_from_result(table[k].clone()), key) {
             k = if k + 1 == table_size { 0 } else { k + 1 };
         }
 
@@ -351,7 +351,7 @@ where
     let mut j = 0usize;
     for i in 0..table_size {
         if flags[i] {
-            r[j] = table[i];
+            r[j] = table[i].clone();
             j += 1;
         }
     }
@@ -363,7 +363,7 @@ where
 pub fn collect_reduce_sparse<T, R, HEQ>(inp: &[T], helper: HEQ, res: &mut Vec<R>)
 where
     T: Copy + Eq + Send + Sync + Default,
-    R: Copy + Send + Sync + Default,
+    R: Clone + Send + Sync + Default,
     HEQ: RCSHashEq<IT = T, RT = R> + HashEq<IT = T, RT = R> + Send + Sync + Copy + Clone,
     <HEQ as HashEq>::KT: Copy + Default + Send + Sync,
     <HEQ as RCSHashEq>::KT: Copy + Default + Send + Sync,
