@@ -41,7 +41,7 @@ pub fn word_counts(s: &Vec<char>, result: &mut Vec<ResultType>) {
         let mut hash = 5381;
 
         for char in input {
-            hash = (hash << 5 + hash) + *char as usize;
+            hash = ((hash << 5) + hash) + *char as usize;
         }
         hash
     };
