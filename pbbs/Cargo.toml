@@ -104,3 +104,9 @@ test    = false
 name    = "wc"
 path    = "src/benchmarks/word_counts/wc_time.rs"
 test    = false
+
+# InvertedIndex
+[[bin]]
+name    = "index"
+path    = "src/benchmarks/inverted_index/index_time.rs"
+test    = false
