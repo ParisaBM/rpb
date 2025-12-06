@@ -104,3 +104,9 @@ test    = false
 name    = "knn"
 path    = "src/benchmarks/nearest_neighbor/knn_time.rs"
 test    = false
+
+# ConvexHull
+[[bin]]
+name    = "hull"
+path    = "src/benchmarks/convex_hull/hull_time.rs"
+test    = false
