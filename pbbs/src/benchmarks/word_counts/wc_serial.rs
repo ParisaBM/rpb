@@ -30,9 +30,6 @@ impl Hasher for Djb2 {
 type Djb2Hasher = BuildHasherDefault<Djb2>;
 
 pub fn word_counts(s: &Vec<char>, result: &mut Vec<ResultType>) {
-    // remove any previous run results from time_loop
-    result.clear();
-
     let mut t = Timer::new("wc");
 
     // convert Vec<char> to a large String

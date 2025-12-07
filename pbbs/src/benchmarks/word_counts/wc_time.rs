@@ -1,5 +1,6 @@
 use std::fs;
 use std::time::Duration;
+use std::cell::RefCell;
 
 #[path = "../../common/io.rs"]
 mod io;
@@ -37,7 +38,7 @@ pub fn run(alg: Algs, rounds: usize, inp: &[DefChar]) -> (Vec<ResultType>, Durat
         Algs::Histogram => wc_histogram::word_counts,
     };
 
-    let mut r: Vec<ResultType> = Vec::new();
+    let r: RefCell<Vec<ResultType>> = RefCell::new(Vec::new());
 
     // convert u8 (DefChar) to char type
     let vec_inp: Vec<char> = inp.iter().map(|c| *c as char).collect();
@@ -46,14 +47,14 @@ pub fn run(alg: Algs, rounds: usize, inp: &[DefChar]) -> (Vec<ResultType>, Durat
         "wc",
         rounds,
         Duration::new(1, 0),
-        || {},
+        || { r.borrow_mut().clear(); },
         || {
-            f(&vec_inp, &mut r);
+            f(&vec_inp, &mut r.borrow_mut());
         },
         || {},
     );
 
-    (r, mean)
+    (r.into_inner(), mean)
 }
 
 fn main() {
