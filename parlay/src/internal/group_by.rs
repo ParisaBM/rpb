@@ -224,3 +224,89 @@ where
     let helper = CountByKeyHelper::<T, S, F>::new(hash);
     collect_reduce_sparse(inp, helper, res);
 }
+
+#[derive(Clone, Copy)]
+struct GroupByKeyHelper<K, V, F> {
+    _k: PhantomData<K>,
+    _v: PhantomData<V>,
+    hash_fn: F,
+}
+
+impl<K, V, F> GroupByKeyHelper<K, V, F>
+where
+    F: Fn(K) -> usize + Send + Sync + Copy + Clone,
+{
+    fn new(hash_fn: F) -> Self {
+        Self {
+            _k: PhantomData,
+            _v: PhantomData,
+            hash_fn,
+        }
+    }
+}
+
+impl<K, V, F> HashEq for GroupByKeyHelper<K, V, F>
+where
+    K: Eq + Default + Send + Sync + Copy + Clone,
+    V: Eq + Copy + Clone + Send + Sync + Default,
+    F: Fn(K) -> usize + Send + Sync + Copy + Clone,
+{
+    type IT = (K, V);
+    type KT = K;
+    type RT = (K, Vec<V>);
+
+    fn hash(&self, a: Self::KT) -> usize {
+        (self.hash_fn)(a)
+    }
+    fn get_key(&self, a: Self::IT) -> Self::KT {
+        a.0
+    }
+
+    #[allow(mismatched_lifetime_syntaxes)]
+    fn get_key_mut<'a>(&'a self, a: &'a mut Self::RT) -> &mut Self::KT {
+        &mut a.0
+    }
+
+    fn get_key_from_result(&self, a: Self::RT) -> Self::KT {
+        a.0
+    }
+    fn equal(&self, a: Self::KT, b: Self::KT) -> bool {
+        a.eq(&b)
+    }
+}
+
+impl<K, V, F> RCSHashEq for GroupByKeyHelper<K, V, F>
+where
+    K: Eq + Default + Send + Sync + Copy + Clone,
+    V: Eq + Copy + Clone + Send + Sync + Default,
+    F: Fn(K) -> usize + Send + Sync + Copy + Clone,
+{
+    type IT = (K, V);
+    type KT = K;
+    type RT = (K, Vec<V>);
+
+    fn init(&self, r: &mut Self::RT, inp: Self::IT) {
+        r.0 = inp.0;
+        r.1 = vec![inp.1];
+    }
+
+    fn reduce(&self, s: &[Self::IT]) -> Self::RT {
+        let key = s[0].0;
+        let vals = s.iter().map(|(_, v)| v.clone()).collect();
+        (key, vals)
+    }
+
+    fn update(&self, r: &mut Self::RT, inp: Self::IT) {
+        r.1.push(inp.1);
+    }
+}
+
+pub fn group_by_key<K, V, F>(inp: &[(K, V)], hash: F, res: &mut Vec<(K, Vec<V>)>)
+where
+    K: Eq + Default + Send + Sync + Copy + Clone,
+    V: Eq + Copy + Clone + Send + Sync + Default,
+    F: Fn(K) -> usize + Send + Sync + Copy + Clone,
+{
+    let helper = GroupByKeyHelper::<K, V, F>::new(hash);
+    collect_reduce_sparse(inp, helper, res);
+}
