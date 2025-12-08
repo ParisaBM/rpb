@@ -86,7 +86,7 @@ pub fn build_index(s: &Vec<char>, doc_start: &str, result: &mut Vec<char>) {
         result.append(&mut word.clone());
         result.push(' ');
         for (i, doc_id) in words.get(word).unwrap().iter().enumerate() {
-            result.push(std::char::from_digit(*doc_id, 10).unwrap());
+            result.extend(doc_id.to_string().chars());
             if i < words.get(word).unwrap().len() - 1 {
                 result.push(' ');
             }
