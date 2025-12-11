@@ -3,6 +3,8 @@ use parlay::Timer;
 use std::collections::HashMap;
 use std::hash::{BuildHasherDefault, Hasher};
 
+use crate::misc::DefChar;
+
 type ResultType = (String, usize);
 
 struct Djb2 {
@@ -29,26 +31,28 @@ impl Hasher for Djb2 {
 
 type Djb2Hasher = BuildHasherDefault<Djb2>;
 
-pub fn word_counts(s: &Vec<char>, result: &mut Vec<ResultType>) {
+pub fn word_counts(s: &[DefChar], result: &mut Vec<ResultType>) {
     let mut t = Timer::new("wc");
 
     // convert Vec<char> to a large String
     // if [A-Z], convert to lower case
     // else if [a-z], no change
     // else, convert to whitespace
-    let str: String = s
+    let vec_str: Vec<DefChar> = s
         .iter()
-        .map(|c| -> char {
-            if c.is_ascii_uppercase() {
-                c.to_ascii_lowercase()
-            } else if c.is_ascii_lowercase() {
+        .map(|c| -> DefChar {
+            if *c >= b'A' && *c <= b'Z' {
+                *c + 32
+            } else if *c >= b'a' && *c <= b'z' {
                 *c
             } else {
-                ' '
+                0
             }
         })
         .collect();
     t.next("copy");
+
+    let str = String::from_utf8(vec_str).unwrap();
 
     // tokenize
     let tokens: Vec<&str> = str.split_ascii_whitespace().collect();

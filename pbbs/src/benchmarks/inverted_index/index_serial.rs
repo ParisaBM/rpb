@@ -2,9 +2,11 @@ use parlay::Timer;
 
 use std::collections::HashMap;
 
+use crate::misc::DefChar;
+
 // have the same complexity as C++ std::search
 // https://en.cppreference.com/w/cpp/algorithm/search.html
-pub fn search(input: &[char], delim: &[char]) -> Option<usize> {
+pub fn search(input: &[DefChar], delim: &[DefChar]) -> Option<usize> {
     if delim.len() == 0 {
         return Some(0);
     }
@@ -20,18 +22,19 @@ pub fn search(input: &[char], delim: &[char]) -> Option<usize> {
     Some(input.iter().len()) // return out-of-bound index
 }
 
-pub fn build_index(s: &Vec<char>, doc_start: &str, result: &mut Vec<char>) {
+pub fn build_index(s: &[DefChar], doc_start: &str, result: &mut Vec<char>) {
     let mut t = Timer::new("index");
+    t.start();
 
     // let n = s.len();
     let m = doc_start.len();
 
     // group by word, each with a sequence of docs it appears in.
-    let mut words: HashMap<Vec<char>, Vec<u32>> = HashMap::new();
+    let mut words: HashMap<Vec<DefChar>, Vec<u32>> = HashMap::new();
     // let mut doc_id_str: Vec<Vec<char>> = Vec::new();
 
     // Find the first document delimiter
-    let doc_start_vec: Vec<char> = doc_start.chars().collect();
+    let doc_start_vec: &[DefChar] = doc_start.as_bytes();
     let mut doc_begin = search(s, &doc_start_vec).unwrap();
 
     // Generate, for each document, the tokens contained within it
@@ -57,7 +60,7 @@ pub fn build_index(s: &Vec<char>, doc_start: &str, result: &mut Vec<char>) {
                 .unwrap_or(s[token_begin..doc_end].len())
                 + token_begin;
 
-            let token: Vec<char> = s[token_begin..token_end]
+            let token: Vec<DefChar> = s[token_begin..token_end]
                 .iter()
                 .map(|c| c.to_ascii_lowercase())
                 .collect();
@@ -79,11 +82,12 @@ pub fn build_index(s: &Vec<char>, doc_start: &str, result: &mut Vec<char>) {
     }
     t.next("generate document tokens");
 
-    let mut sorted_words: Vec<&Vec<char>> = words.keys().collect();
+    let mut sorted_words: Vec<&Vec<DefChar>> = words.keys().collect();
     sorted_words.sort();
 
     for word in sorted_words {
-        result.append(&mut word.clone());
+        let mut word_char = String::from_utf8(word.clone()).unwrap().chars().collect();
+        result.append(&mut word_char);
         result.push(' ');
         for (i, doc_id) in words.get(word).unwrap().iter().enumerate() {
             result.extend(doc_id.to_string().chars());

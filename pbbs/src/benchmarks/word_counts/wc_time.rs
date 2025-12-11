@@ -41,7 +41,7 @@ pub fn run(alg: Algs, rounds: usize, inp: &[DefChar]) -> (Vec<ResultType>, Durat
     let r: RefCell<Vec<ResultType>> = RefCell::new(Vec::new());
 
     // convert u8 (DefChar) to char type
-    let vec_inp: Vec<char> = inp.iter().map(|c| *c as char).collect();
+    // let vec_inp: Vec<char> = inp.iter().map(|c| *c as char).collect();
 
     let mean = time_loop(
         "wc",
@@ -49,7 +49,7 @@ pub fn run(alg: Algs, rounds: usize, inp: &[DefChar]) -> (Vec<ResultType>, Durat
         Duration::new(1, 0),
         || { r.borrow_mut().clear(); },
         || {
-            f(&vec_inp, &mut r.borrow_mut());
+            f(&inp, &mut r.borrow_mut());
         },
         || {},
     );
