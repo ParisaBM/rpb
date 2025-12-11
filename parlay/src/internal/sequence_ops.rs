@@ -175,7 +175,7 @@ where
     F: Fn(T, T) -> T + Copy + Send + Sync,
 {
     let n = v.len();
-    let bls = _BLOCK_SIZE;
+    let bls = _BLOCK_SIZE*1000;
     let n_blocks = num_blocks(n, bls);
 
     // block_sums: length = number of blocks
@@ -215,6 +215,7 @@ where
 
     // compute offsets for each token
     let offsets: Vec<T> = z_block
+        .into_par_iter()
         .flat_map(|(block, sum)| -> Vec<T> {
             // initial value is the count of # token starts up to (and excluding) block i
             let mut acc = *sum;

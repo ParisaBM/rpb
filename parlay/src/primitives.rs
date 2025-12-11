@@ -251,8 +251,9 @@ where
     };
 
     // vector storing where the token starts
-    let start_tokens: Vec<Ipair> = (0..=n)
+    let start_tokens: Vec<Ipair> = (0..(n+1))
         .into_par_iter()
+        .with_min_len(_BLOCK_SIZE*1000)
         .map(|i: usize| -> Ipair {
             if is_start(i) {
                 (1, i as i64)
