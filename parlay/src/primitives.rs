@@ -251,9 +251,9 @@ where
     };
 
     // vector storing where the token starts
-    let start_tokens: Vec<Ipair> = (0..(n+1))
+    let start_tokens: Vec<Ipair> = (0..(n + 1))
         .into_par_iter()
-        .with_min_len(_BLOCK_SIZE*1000)
+        .with_min_len(_BLOCK_SIZE * 1000)
         .map(|i: usize| -> Ipair {
             if is_start(i) {
                 (1, i as i64)
@@ -270,19 +270,18 @@ where
     // sum.0 = total number of tokens, sum.1: last token start
     let (offsets, sum) = block_delayed_scan(&start_tokens, g, (0, 0));
 
-    // (index, offsets)
-    let z = (0..n + 1).into_par_iter().zip(offsets.par_iter());
-
-    // vector of slice of chars to mimic vector of strings
-    let results: Vec<R> = z
+    // compute final results
+    let end_indices: Vec<usize> = (0..n + 1)
         .into_par_iter()
-        .filter_map(|(index, offset)| -> Option<R> {
-            let last_start = offset.1 as usize;
-            if is_end(index) {
-                Some(f(&r[last_start..index]))
-            } else {
-                None
-            }
+        .filter(|index| is_end(*index))
+        .map(|index| index)
+        .collect();
+
+    let results: Vec<R> = end_indices
+        .into_par_iter()
+        .map(|index| -> R {
+            let last_start = offsets[index].1 as usize;
+            f(&r[last_start..index])
         })
         .collect();
 
