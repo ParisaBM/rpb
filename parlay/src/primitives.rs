@@ -273,12 +273,14 @@ where
     // compute final results
     let end_indices: Vec<usize> = (0..n + 1)
         .into_par_iter()
+        .with_min_len(_BLOCK_SIZE * 1000)
         .filter(|index| is_end(*index))
         .map(|index| index)
         .collect();
 
     let results: Vec<R> = end_indices
         .into_par_iter()
+        .with_min_len(_BLOCK_SIZE * 1000)
         .map(|index| -> R {
             let last_start = offsets[index].1 as usize;
             f(&r[last_start..index])

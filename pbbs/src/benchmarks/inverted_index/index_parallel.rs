@@ -2,8 +2,7 @@
 
 use parlay::internal::group_by::{group_by_key, histogram_by_key};
 // use parlay::internal::sample_sort_inplace;
-// use parlay::primitives::flatten_by_val;
-use parlay::primitives::tokens;
+use parlay::primitives::{flatten_by_val, tokens};
 use parlay::Timer;
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
@@ -90,7 +89,7 @@ pub fn build_index(s: &[DefChar], doc_start: &str, result: &mut Vec<char>) {
             word_map
                 .par_iter()
                 .map(|(token, _)| {
-                    let token_str: String = String::from_utf8(token.to_vec()).unwrap();
+                    let token_str: String = unsafe { std::str::from_utf8_unchecked(token) }.to_string();
                     (token_str, doc_id)
                 })
                 .collect()
@@ -98,9 +97,8 @@ pub fn build_index(s: &[DefChar], doc_start: &str, result: &mut Vec<char>) {
         .collect();
     t.next("generate document tokens");
 
-    let word_doc_pairs: Vec<(String, usize)> = docs.into_par_iter().flatten().collect();
-    // let mut word_doc_pairs: Vec<(String, usize)> = Vec::new();
-    // flatten_by_val(&docs, &mut word_doc_pairs);
+    let mut word_doc_pairs: Vec<(String, usize)> = Vec::new();
+    flatten_by_val(&docs, &mut word_doc_pairs);
     t.next("flatten document tokens");
 
     // group by word, each with a sequence of docs it appears in.
@@ -117,33 +115,50 @@ pub fn build_index(s: &[DefChar], doc_start: &str, result: &mut Vec<char>) {
     // let lookup: HashMap<&str, Vec<usize>> = words.into_iter().collect();
     // let sorted_words: Vec<(&str, Vec<usize>)> =
     //     keys.into_iter().map(|k| (k, lookup[&k].clone())).collect();
+    
+    // no order preserving on equal words -- all unique
     words.par_sort_unstable_by_key(|&(word, _)| word);
     t.next("sort words");
 
     // format output for each word
-    let output: Vec<char> = words
+    let docstr: Vec<Vec<char>> = (0..num_docs)
+        .into_par_iter()
+        .map(|doc_id| doc_id.to_string().chars().collect())
+        .collect();
+
+    // Convert words map into Vec<Vec<char>> lines in parallel
+    let space = vec![' '];
+    let newline = vec!['\n'];
+    let lines: Vec<Vec<char>> = words
         .par_iter()
-        .flat_map(|(word, doc_ids)| {
-            let mut word_chars: Vec<char> = word.chars().collect();
-            let mut doc_ids_chars: Vec<char> = doc_ids
-                .par_iter()
-                .enumerate()
-                .flat_map(|(i, n)| {
-                    let mut chars: Vec<char> = n.to_string().chars().collect();
-                    if i != doc_ids.len() - 1 {
-                        chars.push(' '); // add space between numbers
+        .map(|(word, doc_ids)| {
+            let word_chars: Vec<char> = word.chars().collect();
+            let len = doc_ids.len() * 2 + 2;
+
+            // each line is the word followed by doc ids, all sperated by spaces, end with newline
+            let line: Vec<Vec<char>> = (0..len)
+                .into_par_iter()
+                .map(|i| -> Vec<char> {
+                    if i == 0 {
+                        word.chars().collect::<Vec<char>>().clone()
+                    } else if i == len - 1 {
+                        newline.clone()
+                    } else if i % 2 == 1 {
+                        space.clone()
+                    } else {
+                        docstr[doc_ids[i / 2 - 1]].clone()
                     }
-                    chars
                 })
                 .collect();
 
-            word_chars.push(' ');
-            word_chars.append(&mut doc_ids_chars);
-            word_chars.push('\n');
+            let mut line_ret: Vec<char> = Vec::new();
+            flatten_by_val(&line, &mut line_ret);
 
-            word_chars
+            line_ret
         })
         .collect();
-    *result = output;
     t.next("format words");
+
+    flatten_by_val(&lines, result);
+    t.next("flatten formatted words");
 }
