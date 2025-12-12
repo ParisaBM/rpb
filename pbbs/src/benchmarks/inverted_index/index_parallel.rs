@@ -73,13 +73,13 @@ pub fn build_index(s: &[DefChar], doc_start: &str, result: &mut Vec<char>) {
                     } else if *c >= b'a' && *c <= b'z' {
                         *c
                     } else {
-                        0
+                        b' '
                     }
                 })
                 .collect();
 
             // generate tokens (i.e., contiguous regions of non-zero characters)
-            let tokens: Vec<&[DefChar]> = tokens(&str, |c| *c == 0);
+            let tokens: Vec<&[DefChar]> = tokens(&str, |c| *c == b' ');
 
             // remove duplicate tokens
             let mut word_map: Vec<(&[DefChar], usize)> = Vec::new();
@@ -132,7 +132,7 @@ pub fn build_index(s: &[DefChar], doc_start: &str, result: &mut Vec<char>) {
     let lines: Vec<Vec<char>> = words
         .par_iter()
         .map(|(word, doc_ids)| {
-            let word_chars: Vec<char> = word.chars().collect();
+            // let word_chars: Vec<char> = word.chars().collect();
             let len = doc_ids.len() * 2 + 2;
 
             // each line is the word followed by doc ids, all sperated by spaces, end with newline

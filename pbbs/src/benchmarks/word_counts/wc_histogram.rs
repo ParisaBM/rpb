@@ -23,14 +23,14 @@ pub fn word_counts(s: &[DefChar], result: &mut Vec<ResultType>) {
             } else if *c >= b'a' && *c <= b'z' {
                 *c
             } else {
-                0
+                b' '
             }
         })
         .collect();
     t.next("copy");
 
     // tokenize
-    let tokens: Vec<&[DefChar]> = tokens(&str, |c| *c == 0);
+    let tokens: Vec<&[DefChar]> = tokens(&str, |c| *c == b' ');
     t.next("tokenize");
 
     // (token, count)
