@@ -210,26 +210,21 @@ where
     // total.0 = total number of tokens, total.1: last token start
     let total = scan_inplace(&mut block_sums, false, op);
 
-    // zip each block_sums[i] with a block of start_tokens
-    let z_block = v.par_chunks(bls).zip(&block_sums);
-
     // compute offsets for each token
-    let offsets: Vec<T> = z_block
-        .into_par_iter()
-        .flat_map(|(block, sum)| -> Vec<T> {
+    let mut offsets = vec![T::default(); n];
+    offsets
+        .par_chunks_mut(bls) // a block of offsets
+        .zip(v.par_chunks(bls)) // zip with a block of start_tokens
+        .zip(block_sums.par_iter().cloned())
+        .for_each(|((out_chunk, in_chunk), sum)| {
             // initial value is the count of # token starts up to (and excluding) block i
-            let mut acc = *sum;
+            let mut acc = sum;
 
-            // accumulates within the block
-            block
-                .iter()
-                .map(|val| -> T {
-                    acc = op(acc, *val);
-                    acc
-                })
-                .collect()
-        })
-        .collect();
+            for (i, &val) in in_chunk.iter().enumerate() {
+                acc = op(acc, val);
+                out_chunk[i] = acc;
+            }
+        });
 
     (offsets, total)
 }
