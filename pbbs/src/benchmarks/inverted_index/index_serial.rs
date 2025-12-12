@@ -1,38 +1,30 @@
 use parlay::Timer;
-
 use std::collections::HashMap;
+use crate::misc::DefChar;
 
-// have the same complexity as C++ std::search
-// https://en.cppreference.com/w/cpp/algorithm/search.html
-pub fn search(input: &[char], delim: &[char]) -> Option<usize> {
+pub fn search(input: &[DefChar], delim: &[DefChar]) -> usize {
     if delim.len() == 0 {
-        return Some(0);
-    }
-    if delim.len() > input.len() {
-        return None;
+        return 0;
     }
 
-    for i in 0..=input.len() - delim.len() {
-        if input[i..i + delim.len()] == delim[..] {
-            return Some(i);
-        }
-    }
-    Some(input.iter().len()) // return out-of-bound index
+    input.windows(delim.len())
+         .position(|window| window == delim)
+         .unwrap_or(input.len()) // out of bound index
 }
 
-pub fn build_index(s: &Vec<char>, doc_start: &str, result: &mut Vec<char>) {
+pub fn build_index(s: &[DefChar], doc_start: &str, result: &mut Vec<char>) {
     let mut t = Timer::new("index");
 
     // let n = s.len();
     let m = doc_start.len();
 
     // group by word, each with a sequence of docs it appears in.
-    let mut words: HashMap<Vec<char>, Vec<u32>> = HashMap::new();
+    let mut words: HashMap<Vec<DefChar>, Vec<u32>> = HashMap::new();
     // let mut doc_id_str: Vec<Vec<char>> = Vec::new();
 
     // Find the first document delimiter
-    let doc_start_vec: Vec<char> = doc_start.chars().collect();
-    let mut doc_begin = search(s, &doc_start_vec).unwrap();
+    let doc_start_vec: &[DefChar] = doc_start.as_bytes();
+    let mut doc_begin = search(s, &doc_start_vec);
 
     // Generate, for each document, the tokens contained within it
     let mut doc_id = 0;
@@ -40,7 +32,7 @@ pub fn build_index(s: &Vec<char>, doc_start: &str, result: &mut Vec<char>) {
         // doc_id_str.push(vec![doc_id as char]);
 
         // Find the end of the current document
-        let doc_end = search(&s[doc_begin + m..], &doc_start_vec).unwrap() + doc_begin + m;
+        let doc_end = search(&s[doc_begin + m..], &doc_start_vec) + doc_begin + m;
 
         // generate tokens (i.e., contiguous regions of alphabetic characters)
         let mut token_begin = doc_begin + m;
@@ -57,13 +49,13 @@ pub fn build_index(s: &Vec<char>, doc_start: &str, result: &mut Vec<char>) {
                 .unwrap_or(s[token_begin..doc_end].len())
                 + token_begin;
 
-            let token: Vec<char> = s[token_begin..token_end]
+            let token: Vec<DefChar> = s[token_begin..token_end]
                 .iter()
                 .map(|c| c.to_ascii_lowercase())
                 .collect();
 
             let doc_ids_for_token = words.entry(token.clone()).or_default();
-            if !doc_ids_for_token.contains(&doc_id) {
+            if doc_ids_for_token.is_empty() || *doc_ids_for_token.last().unwrap() != doc_id {
                 doc_ids_for_token.push(doc_id);
             }
 
@@ -79,11 +71,12 @@ pub fn build_index(s: &Vec<char>, doc_start: &str, result: &mut Vec<char>) {
     }
     t.next("generate document tokens");
 
-    let mut sorted_words: Vec<&Vec<char>> = words.keys().collect();
+    let mut sorted_words: Vec<&Vec<DefChar>> = words.keys().collect();
     sorted_words.sort();
 
     for word in sorted_words {
-        result.append(&mut word.clone());
+        let mut word_char = String::from_utf8(word.clone()).unwrap().chars().collect();
+        result.append(&mut word_char);
         result.push(' ');
         for (i, doc_id) in words.get(word).unwrap().iter().enumerate() {
             result.extend(doc_id.to_string().chars());

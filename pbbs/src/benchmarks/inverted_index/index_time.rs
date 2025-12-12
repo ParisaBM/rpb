@@ -27,7 +27,7 @@ pub fn run(alg: Algs, s: &[DefChar], start: &str, rounds: usize) -> (Vec<char>, 
     };
 
     // convert u8 (DefChar) to char type
-    let vec_s: Vec<char> = s.iter().map(|c| *c as char).collect();
+    // let vec_s: Vec<char> = s.iter().map(|c| *c as char).collect();
 
     let r: RefCell<Vec<char>> = RefCell::new(Vec::new());
 
@@ -39,7 +39,7 @@ pub fn run(alg: Algs, s: &[DefChar], start: &str, rounds: usize) -> (Vec<char>, 
             r.borrow_mut().clear();
         },
         || {
-            f(&vec_s, start, &mut r.borrow_mut());
+            f(&s, start, &mut r.borrow_mut());
         },
         || {},
     );

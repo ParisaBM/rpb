@@ -10,7 +10,9 @@ use rayon::iter::{
 };
 use rayon::slice::ParallelSliceMut;
 
-pub fn djb2_hash_char(input: &[char]) -> usize {
+use crate::misc::DefChar;
+
+pub fn djb2_hash_char(input: &[DefChar]) -> usize {
     let mut hash = 5381;
 
     for char in input {
@@ -28,13 +30,13 @@ pub fn djb2_hash_str(input: &str) -> usize {
     hash
 }
 
-pub fn build_index(s: &Vec<char>, doc_start: &str, result: &mut Vec<char>) {
+pub fn build_index(s: &[DefChar], doc_start: &str, result: &mut Vec<char>) {
     let mut t = Timer::new("index");
 
     let n = s.len();
     let m = doc_start.len();
 
-    let doc_start_vec: Vec<char> = doc_start.chars().collect();
+    let doc_start_vec: &[DefChar] = doc_start.as_bytes();
 
     // sequence of indices to the start of each document
     let starts: Vec<usize> = s
@@ -64,31 +66,31 @@ pub fn build_index(s: &Vec<char>, doc_start: &str, result: &mut Vec<char>) {
             };
 
             // blank out all non characters, and convert to lowercase
-            let str: Vec<char> = s[start..end]
+            let str: Vec<DefChar> = s[start..end]
                 .par_iter()
-                .map(|c| -> char {
-                    if c.is_ascii_uppercase() {
-                        c.to_ascii_lowercase()
-                    } else if c.is_ascii_lowercase() {
+                .map(|c| -> DefChar {
+                    if *c >= b'A' && *c <= b'Z' {
+                        *c + 32
+                    } else if *c >= b'a' && *c <= b'z' {
                         *c
                     } else {
-                        ' '
+                        0
                     }
                 })
                 .collect();
 
             // generate tokens (i.e., contiguous regions of non-zero characters)
-            let tokens: Vec<&[char]> = tokens(&str, |c| c.is_whitespace());
+            let tokens: Vec<&[DefChar]> = tokens(&str, |c| *c == 0);
 
             // remove duplicate tokens
-            let mut word_map: Vec<(&[char], usize)> = Vec::new();
+            let mut word_map: Vec<(&[DefChar], usize)> = Vec::new();
             // couldn't make remove_duplicates work with T=&Vec<H>
             histogram_by_key(&tokens, djb2_hash_char, &mut word_map);
 
             word_map
                 .par_iter()
                 .map(|(token, _)| {
-                    let token_str: String = token.iter().collect();
+                    let token_str: String = String::from_utf8(token.to_vec()).unwrap();
                     (token_str, doc_id)
                 })
                 .collect()
